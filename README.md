@@ -29,17 +29,11 @@ Comptal2 est une application desktop développée avec Electron et React qui per
 4. Lancez l'application depuis le menu Démarrer ou le raccourci sur le bureau
 
 ### macOS
-
-1. Téléchargez le fichier `.dmg` depuis la [section Releases](https://github.com/VOTRE_USERNAME/VOTRE_REPO/releases)
-2. Ouvrez le fichier `.dmg` téléchargé
-3. Glissez l'application dans le dossier Applications
-4. Lancez l'application depuis le dossier Applications
+En cours de développement...
 
 ### Linux
 
-1. Téléchargez le fichier `.AppImage` depuis la [section Releases](https://github.com/VOTRE_USERNAME/VOTRE_REPO/releases)
-2. Rendez le fichier exécutable : `chmod +x Comptal2-1.0.0-linux-x64.AppImage`
-3. Exécutez l'application : `./Comptal2-1.0.0-linux-x64.AppImage`
+En cours de développement...
 
 ## Utilisation
 
