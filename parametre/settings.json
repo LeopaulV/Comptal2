@@ -1,0 +1,11 @@
+{
+  "theme": "light",
+  "language": "fr",
+  "currency": "€",
+  "dateFormat": "DD/MM/YYYY",
+  "dataDirectory": "./data",
+  "autoSave": true,
+  "showBalance": true,
+  "defaultView": "dashboard"
+}
+

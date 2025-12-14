@@ -1,0 +1,675 @@
+/* Styles personnalisés pour Finance Global - Design professionnel et sobre */
+
+/* ============================================
+   PALETTE DE COULEURS PROFESSIONNELLE
+   ============================================ */
+:root {
+  /* Thème clair - Bleus professionnels */
+  --finance-primary: #1e3a8a;
+  --finance-primary-light: #3b82f6;
+  --finance-primary-lighter: #60a5fa;
+  --finance-primary-lightest: #dbeafe;
+  
+  /* Gris neutres */
+  --finance-gray-50: #f8fafc;
+  --finance-gray-100: #f1f5f9;
+  --finance-gray-200: #e2e8f0;
+  --finance-gray-300: #cbd5e1;
+  --finance-gray-400: #94a3b8;
+  --finance-gray-500: #64748b;
+  --finance-gray-600: #475569;
+  --finance-gray-700: #334155;
+  --finance-gray-800: #1e293b;
+  --finance-gray-900: #0f172a;
+  
+  /* États */
+  --finance-success: #10b981;
+  --finance-success-light: rgba(16, 185, 129, 0.1);
+  --finance-danger: #ef4444;
+  --finance-danger-light: rgba(239, 68, 68, 0.1);
+  --finance-warning: #f59e0b;
+  --finance-info: #3b82f6;
+  
+  /* Ombres professionnelles */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark {
+  /* Thème sombre - Bleus atténués */
+  --finance-primary: #3b82f6;
+  --finance-primary-light: #60a5fa;
+  --finance-primary-lighter: #93c5fd;
+  --finance-primary-lightest: #1e3a8a;
+  
+  /* Gris foncés harmonieux */
+  --finance-gray-50: #0f172a;
+  --finance-gray-100: #1e293b;
+  --finance-gray-200: #334155;
+  --finance-gray-300: #475569;
+  --finance-gray-400: #64748b;
+  --finance-gray-500: #94a3b8;
+  --finance-gray-600: #cbd5e1;
+  --finance-gray-700: #e2e8f0;
+  --finance-gray-800: #f1f5f9;
+  --finance-gray-900: #f8fafc;
+}
+
+/* ============================================
+   CONTAINER PRINCIPAL
+   ============================================ */
+.finance-global-page {
+  padding: 24px;
+  background-color: var(--finance-gray-50);
+  min-height: calc(100vh - 140px);
+  transition: background-color 0.3s ease;
+}
+
+.dark .finance-global-page {
+  background-color: var(--finance-gray-100);
+}
+
+.finance-global-page h1 {
+  color: var(--finance-gray-900);
+  margin-bottom: 24px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  transition: color 0.3s ease;
+}
+
+.dark .finance-global-page h1 {
+  color: var(--finance-gray-800);
+}
+
+/* ============================================
+   ONGLETS DE GRAPHIQUES
+   ============================================ */
+.chart-tabs-container {
+  margin-bottom: 0;
+  margin-top: 20px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 8px;
+  background-color: var(--finance-gray-100);
+  border-radius: 12px 12px 0 0;
+  padding: 6px;
+  border: 1px solid var(--finance-gray-300);
+  border-bottom: none;
+  transition: all 0.3s ease;
+}
+
+.dark .chart-tabs {
+  background-color: var(--finance-gray-200);
+  border-color: var(--finance-gray-400);
+}
+
+.chart-tab {
+  flex: 1;
+  padding: 12px 24px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--finance-gray-600);
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.dark .chart-tab {
+  color: var(--finance-gray-500);
+}
+
+.chart-tab:hover {
+  background-color: var(--finance-gray-200);
+  color: var(--finance-gray-800);
+  transform: translateY(-1px);
+}
+
+.dark .chart-tab:hover {
+  background-color: var(--finance-gray-300);
+  color: var(--finance-gray-700);
+}
+
+.chart-tab.active {
+  background-color: #ffffff;
+  color: var(--finance-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  border-color: var(--finance-gray-300);
+  border-bottom-color: transparent;
+  z-index: 1;
+}
+
+.dark .chart-tab.active {
+  background-color: var(--finance-gray-200);
+  color: var(--finance-primary-light);
+  border-color: var(--finance-gray-400);
+}
+
+.chart-tab.active:hover {
+  background-color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.dark .chart-tab.active:hover {
+  background-color: var(--finance-gray-200);
+}
+
+.chart-tab .mr-2 {
+  margin-right: 0;
+  font-size: 1rem;
+}
+
+/* ============================================
+   CONTAINER DE GRAPHIQUES
+   ============================================ */
+.finance-global-chart-container {
+  background-color: #ffffff;
+  border: 1px solid var(--finance-gray-300);
+  border-radius: 0 12px 12px 12px;
+  box-shadow: var(--shadow-lg);
+  height: 500px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.dark .finance-global-chart-container {
+  background-color: var(--finance-gray-200);
+  border-color: var(--finance-gray-400);
+  box-shadow: var(--shadow-xl);
+}
+
+.chart {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.chart.active {
+  display: block;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   CONTAINER DU TABLEAU
+   ============================================ */
+.finance-global-table-container {
+  height: 550px;
+  overflow: auto;
+  border: 1px solid var(--finance-gray-300);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 20px;
+  position: relative;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.dark .finance-global-table-container {
+  background-color: var(--finance-gray-200);
+  border-color: var(--finance-gray-400);
+}
+
+.finance-global-table-container .table-wrapper {
+  overflow: auto;
+}
+
+/* ============================================
+   TABLEAU - STRUCTURE PRINCIPALE
+   ============================================ */
+.finance-table {
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.875rem;
+  background-color: #ffffff;
+}
+
+.dark .finance-table {
+  background-color: var(--finance-gray-200);
+}
+
+/* ============================================
+   EN-TÊTE DU TABLEAU
+   ============================================ */
+.finance-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.finance-table th {
+  position: sticky;
+  top: 0;
+  background-color: #1e3a8a;
+  color: white;
+  z-index: 20;
+  padding: 14px 12px;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  border-right: none;
+  transition: none;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.dark .finance-table th {
+  background-color: #1e3a8a;
+}
+
+.finance-table th:last-child {
+  border-right: none;
+}
+
+.finance-table th.fixed-column {
+  z-index: 30 !important;
+  background-color: #1e3a8a !important;
+  position: sticky !important;
+  border-right: none !important;
+}
+
+.dark .finance-table th.fixed-column {
+  background-color: #1e3a8a !important;
+}
+
+/* ============================================
+   CORPS DU TABLEAU
+   ============================================ */
+.finance-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--finance-gray-200);
+  border-right: 1px solid var(--finance-gray-200);
+  white-space: nowrap;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  vertical-align: middle;
+  color: var(--finance-gray-900);
+}
+
+.dark .finance-table td {
+  border-bottom-color: var(--finance-gray-300);
+  border-right-color: var(--finance-gray-300);
+  background-color: var(--finance-gray-200);
+  color: var(--finance-gray-800);
+}
+
+.finance-table td:last-child {
+  border-right: none;
+}
+
+.finance-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.finance-table .odd-row {
+  background-color: var(--finance-gray-50);
+}
+
+.dark .finance-table .odd-row {
+  background-color: var(--finance-gray-300);
+}
+
+.finance-table .even-row {
+  background-color: #ffffff;
+}
+
+.dark .finance-table .even-row {
+  background-color: var(--finance-gray-200);
+}
+
+.finance-table tbody tr:hover {
+  background-color: var(--finance-primary-lightest) !important;
+  transition: background-color 0.2s ease;
+}
+
+.dark .finance-table tbody tr:hover {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* ============================================
+   LIGNE TOTAL
+   ============================================ */
+.finance-table tbody tr.total-row {
+  border-top: 2px solid var(--finance-gray-300);
+  background-color: var(--finance-gray-100) !important;
+  font-weight: 600;
+}
+
+.dark .finance-table tbody tr.total-row {
+  border-top-color: var(--finance-gray-400);
+  background-color: var(--finance-gray-300) !important;
+}
+
+.finance-table tbody tr.total-row:hover {
+  background-color: var(--finance-gray-200) !important;
+}
+
+.dark .finance-table tbody tr.total-row:hover {
+  background-color: var(--finance-gray-400) !important;
+}
+
+.finance-table tbody tr.total-row td {
+  font-weight: 600;
+  color: var(--finance-gray-900);
+}
+
+.dark .finance-table tbody tr.total-row td {
+  color: var(--finance-gray-800);
+}
+
+/* ============================================
+   COLONNES FIXES
+   ============================================ */
+.finance-table .fixed-column {
+  position: sticky !important;
+  z-index: 15;
+}
+
+.finance-table .column-1 {
+  left: 0;
+  min-width: 70px;
+}
+
+.finance-table .column-2 {
+  left: 70px;
+  min-width: 200px;
+}
+
+.finance-table .column-3 {
+  left: 270px;
+  min-width: 100px;
+}
+
+.finance-table .column-4 {
+  left: 370px;
+  min-width: 100px;
+}
+
+.finance-table .column-5 {
+  left: 470px;
+  min-width: 90px;
+}
+
+.finance-table .column-6 {
+  left: 560px;
+  min-width: 80px;
+}
+
+.finance-table .column-7 {
+  left: 640px;
+  min-width: 80px;
+}
+
+/* Ombre pour la dernière colonne fixe */
+.finance-table th.column-4::after,
+.finance-table th.column-7::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+/* Effet de bloc uni pour les colonnes fixes */
+.finance-global-table-container::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 470px; /* Largeur totale des 4 colonnes */
+  height: 100%;
+  background-color: #ffffff;
+  z-index: 4;
+  border-right: 2px solid var(--finance-gray-300);
+  box-shadow: 5px 0 5px -2px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+.dark .finance-global-table-container::before {
+  background-color: var(--finance-gray-200);
+  border-right-color: var(--finance-gray-400);
+}
+
+/* Effet d'ombre pour séparer les colonnes fixes */
+.finance-global-table-container::after {
+  content: '';
+  position: absolute;
+  left: 470px; /* Juste après le bloc fixe */
+  top: 0;
+  width: 10px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0));
+  z-index: 6;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+/* S'assurer que les colonnes fixes paires/impaires gardent leur couleur */
+.finance-table tbody tr.odd-row td.fixed-column {
+  background-color: var(--finance-gray-50) !important;
+  color: var(--finance-gray-900);
+}
+
+.dark .finance-table tbody tr.odd-row td.fixed-column {
+  background-color: var(--finance-gray-300) !important;
+  color: var(--finance-gray-800);
+}
+
+.finance-table tbody tr.even-row td.fixed-column {
+  background-color: #ffffff !important;
+  color: var(--finance-gray-900);
+}
+
+.dark .finance-table tbody tr.even-row td.fixed-column {
+  background-color: var(--finance-gray-200) !important;
+  color: var(--finance-gray-800);
+}
+
+.finance-table tbody tr.total-row td.fixed-column {
+  background-color: var(--finance-gray-100) !important;
+  color: var(--finance-gray-900);
+}
+
+.dark .finance-table tbody tr.total-row td.fixed-column {
+  background-color: var(--finance-gray-300) !important;
+  color: var(--finance-gray-800);
+}
+
+/* Effet de survol pour les colonnes fixes */
+.finance-table tbody tr:hover td.fixed-column {
+  background-color: var(--finance-gray-200) !important;
+}
+
+.dark .finance-table tbody tr:hover td.fixed-column {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.finance-table tbody tr.total-row:hover td.fixed-column {
+  background-color: var(--finance-gray-200) !important;
+}
+
+.dark .finance-table tbody tr.total-row:hover td.fixed-column {
+  background-color: var(--finance-gray-400) !important;
+}
+
+/* ============================================
+   COULEURS DE DONNÉES (HEATMAP)
+   ============================================ */
+/* Les couleurs sont gérées inline via getColorStyle dans le composant */
+/* Amélioration du contraste pour les valeurs */
+.finance-table td .text-green-600 {
+  color: #059669;
+  font-weight: 500;
+}
+
+.dark .finance-table td .text-green-600 {
+  color: #10b981;
+}
+
+.finance-table td .text-red-600 {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.dark .finance-table td .text-red-600 {
+  color: #ef4444;
+}
+
+/* ============================================
+   SCROLLBAR PERSONNALISÉE
+   ============================================ */
+.finance-global-table-container::-webkit-scrollbar,
+.finance-global-chart-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.finance-global-table-container::-webkit-scrollbar-track,
+.finance-global-chart-container::-webkit-scrollbar-track {
+  background: var(--finance-gray-100);
+  border-radius: 4px;
+}
+
+.dark .finance-global-table-container::-webkit-scrollbar-track,
+.dark .finance-global-chart-container::-webkit-scrollbar-track {
+  background: var(--finance-gray-300);
+}
+
+.finance-global-table-container::-webkit-scrollbar-thumb,
+.finance-global-chart-container::-webkit-scrollbar-thumb {
+  background: var(--finance-gray-400);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.finance-global-table-container::-webkit-scrollbar-thumb:hover,
+.finance-global-chart-container::-webkit-scrollbar-thumb:hover {
+  background: var(--finance-gray-500);
+}
+
+.dark .finance-global-table-container::-webkit-scrollbar-thumb,
+.dark .finance-global-chart-container::-webkit-scrollbar-thumb {
+  background: var(--finance-gray-500);
+}
+
+.dark .finance-global-table-container::-webkit-scrollbar-thumb:hover,
+.dark .finance-global-chart-container::-webkit-scrollbar-thumb:hover {
+  background: var(--finance-gray-600);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1200px) {
+  .finance-global-chart-container {
+    height: 400px;
+    padding: 16px;
+  }
+  
+  .finance-global-table-container {
+    height: 450px;
+  }
+  
+  .finance-table .column-2 {
+    min-width: 150px;
+  }
+  
+  .finance-global-table-container::before {
+    width: 420px;
+  }
+  
+  .finance-global-table-container::after {
+    left: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .finance-global-page {
+    padding: 16px;
+  }
+  
+  .finance-global-chart-container {
+    height: 300px;
+    padding: 12px;
+    border-radius: 0 8px 8px 8px;
+  }
+  
+  .finance-global-table-container {
+    height: 350px;
+    border-radius: 8px;
+  }
+  
+  .finance-table {
+    font-size: 0.75rem;
+  }
+  
+  .finance-table th,
+  .finance-table td {
+    padding: 8px 6px;
+  }
+  
+  .chart-tab {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+  }
+  
+  .chart-tab .mr-2 {
+    font-size: 0.875rem;
+  }
+  
+  .finance-table .column-1 {
+    min-width: 60px;
+  }
+  
+  .finance-table .column-2 {
+    left: 60px;
+    min-width: 120px;
+  }
+  
+  .finance-table .column-3 {
+    left: 180px;
+    min-width: 80px;
+  }
+  
+  .finance-table .column-4 {
+    left: 260px;
+    min-width: 80px;
+  }
+  
+  .finance-global-table-container::before {
+    width: 340px;
+  }
+  
+  .finance-global-table-container::after {
+    left: 340px;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "!!!": {
+    "name": "ERREUR",
+    "color": "#FFB3BA"
+  },
+  "???": {
+    "name": "INCONNUE",
+    "color": "#ffb8b8"
+  },
+  "X": {
+    "name": "TIC",
+    "color": "#ffffff"
+  }
+}
+
