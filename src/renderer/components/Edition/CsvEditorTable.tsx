@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useImperativeHandle, forwardRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faTrashAlt, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { EditionRow } from '../../types/Edition';
@@ -16,6 +16,11 @@ interface CsvEditorTableProps {
   categorySuggestions?: Record<number, string | null>; // Suggestions de catégories par index de ligne
 }
 
+export interface CsvEditorTableRef {
+  getModifiedRows: () => EditionRow[];
+  clearModifications: () => void;
+}
+
 interface ContextMenuState {
   visible: boolean;
   x: number;
@@ -23,7 +28,238 @@ interface ContextMenuState {
   targetRowIndex: number;
 }
 
-const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
+// Fonction pour formater la valeur d'une cellule pour l'affichage (mémorisée)
+const formatCellValue = (value: any, header: string): string => {
+  if (value === null || value === undefined) return '';
+  if (header === 'Débit' || header === 'Crédit' || header === 'Solde') {
+    const num = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+    return num === 0 ? '0' : num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return String(value);
+};
+
+// Interface pour TableCell
+interface TableCellProps {
+  rowIndex: number;
+  colIndex: number;
+  header: string;
+  displayValue: string;
+  columnWidth: number;
+  isEditing: boolean;
+  editingValue: string;
+  categorySuggestion: string | null | undefined;
+  onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
+  onCellFocus: (rowIndex: number, colIndex: number) => void;
+  onCellBlur: () => void;
+  onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number) => void;
+}
+
+// Composant TableCell mémorisé
+const TableCell = memo<TableCellProps>(({
+  rowIndex,
+  colIndex,
+  header,
+  displayValue,
+  columnWidth,
+  isEditing,
+  editingValue,
+  categorySuggestion,
+  onCellChange,
+  onCellFocus,
+  onCellBlur,
+  onKeyDown,
+}) => {
+  const isLibelle = header === 'Libellé';
+  const isCategory = header === 'catégorie';
+  const hasSuggestion = isCategory && categorySuggestion && (!displayValue || displayValue.trim() === '' || displayValue === '???');
+
+  if (isLibelle) {
+    return (
+      <td style={{ width: columnWidth || 'auto' }}>
+        <div className="label-cell-content">
+          <textarea
+            value={isEditing ? editingValue : displayValue}
+            onChange={(e) => onCellChange(rowIndex, colIndex, e.target.value)}
+            onFocus={() => onCellFocus(rowIndex, colIndex)}
+            onBlur={onCellBlur}
+            onKeyDown={(e) => onKeyDown(e, rowIndex, colIndex)}
+            className="form-control form-control-sm libelle-textarea"
+            rows={1}
+          />
+        </div>
+      </td>
+    );
+  }
+
+  return (
+    <td style={{ width: columnWidth || 'auto' }}>
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          value={isEditing ? editingValue : displayValue}
+          onChange={(e) => onCellChange(rowIndex, colIndex, e.target.value)}
+          onFocus={() => onCellFocus(rowIndex, colIndex)}
+          onBlur={onCellBlur}
+          onKeyDown={(e) => onKeyDown(e, rowIndex, colIndex)}
+          className="form-control form-control-sm"
+          style={{
+            textAlign: header === 'Débit' || header === 'Crédit' || header === 'Solde' ? 'right' : 'left',
+            ...(isCategory && displayValue === 'X' ? { backgroundColor: '#fee2e2', cursor: 'not-allowed' } : {}),
+          }}
+          disabled={isCategory && displayValue === 'X'}
+          placeholder={hasSuggestion ? `Suggéré: ${categorySuggestion}` : undefined}
+          maxLength={isCategory ? 1 : undefined}
+        />
+        {hasSuggestion && !isEditing && (
+          <span className="suggestion-badge">
+            <span>💡</span>
+            <span>{categorySuggestion}</span>
+          </span>
+        )}
+      </div>
+    </td>
+  );
+}, (prevProps, nextProps) => {
+  // Comparaison personnalisée pour optimiser les re-renders
+  return (
+    prevProps.rowIndex === nextProps.rowIndex &&
+    prevProps.colIndex === nextProps.colIndex &&
+    prevProps.displayValue === nextProps.displayValue &&
+    prevProps.columnWidth === nextProps.columnWidth &&
+    prevProps.isEditing === nextProps.isEditing &&
+    prevProps.editingValue === nextProps.editingValue &&
+    prevProps.categorySuggestion === nextProps.categorySuggestion &&
+    prevProps.header === nextProps.header
+  );
+});
+
+TableCell.displayName = 'TableCell';
+
+// Interface pour TableRow
+interface TableRowProps {
+  row: EditionRow;
+  rowIndex: number;
+  headers: string[];
+  columnWidths: number[];
+  editingCell: { rowIndex: number; colIndex: number } | null;
+  editingValue: string;
+  categorySuggestion: string | null | undefined;
+  onContextMenu: (event: React.MouseEvent, rowIndex: number) => void;
+  onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
+  onCellFocus: (rowIndex: number, colIndex: number) => void;
+  onCellBlur: () => void;
+  onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number) => void;
+  getRowWithModifications: (row: EditionRow) => EditionRow;
+  modifiedRowKeys: Set<string>;
+}
+
+// Composant TableRow mémorisé
+const TableRow = memo<TableRowProps>(({
+  row,
+  rowIndex,
+  headers,
+  columnWidths,
+  editingCell,
+  editingValue,
+  categorySuggestion,
+  onContextMenu,
+  onCellChange,
+  onCellFocus,
+  onCellBlur,
+  onKeyDown,
+  getRowWithModifications,
+  modifiedRowKeys,
+}) => {
+  const isEditingRow = editingCell?.rowIndex === rowIndex;
+  // Utiliser la ligne avec modifications appliquées
+  const rowWithModifications = getRowWithModifications(row);
+  const rowKey = `${row.Source}|${row.rowIndex ?? ''}|${row.Date}|${row.Libellé}`;
+  const isModified = modifiedRowKeys.has(rowKey) || rowWithModifications.modified;
+
+  return (
+    <tr
+      className={`${isModified ? 'modified-row' : ''} ${rowWithModifications.deleted ? 'deleted-row' : ''}`}
+      onContextMenu={(e) => onContextMenu(e, rowIndex)}
+    >
+      {headers.map((header, colIndex) => {
+        const value = rowWithModifications[header as keyof EditionRow];
+        const displayValue = formatCellValue(value, header);
+        const isEditing = isEditingRow && editingCell?.colIndex === colIndex;
+
+        return (
+          <TableCell
+            key={`${rowIndex}-${colIndex}`}
+            rowIndex={rowIndex}
+            colIndex={colIndex}
+            header={header}
+            displayValue={displayValue}
+            columnWidth={columnWidths[colIndex] || 150}
+            isEditing={isEditing}
+            editingValue={editingValue}
+            categorySuggestion={categorySuggestion}
+            onCellChange={onCellChange}
+            onCellFocus={onCellFocus}
+            onCellBlur={onCellBlur}
+            onKeyDown={onKeyDown}
+          />
+        );
+      })}
+    </tr>
+  );
+}, (prevProps, nextProps) => {
+  // Comparaison personnalisée pour optimiser les re-renders
+  if (prevProps.rowIndex !== nextProps.rowIndex) return false;
+  
+  // Vérifier si la ligne a été modifiée
+  const prevRowKey = `${prevProps.row.Source}|${prevProps.row.rowIndex ?? ''}|${prevProps.row.Date}|${prevProps.row.Libellé}`;
+  const nextRowKey = `${nextProps.row.Source}|${nextProps.row.rowIndex ?? ''}|${nextProps.row.Date}|${nextProps.row.Libellé}`;
+  const prevIsModified = prevProps.modifiedRowKeys.has(prevRowKey);
+  const nextIsModified = nextProps.modifiedRowKeys.has(nextRowKey);
+  
+  if (prevIsModified !== nextIsModified) return false;
+  
+  // Si la ligne n'est pas modifiée, comparer les valeurs originales
+  if (!prevIsModified && !nextIsModified) {
+    if (prevProps.row !== nextProps.row) {
+      const prevRow = prevProps.row;
+      const nextRow = nextProps.row;
+      if (
+        prevRow.modified !== nextRow.modified ||
+        prevRow.deleted !== nextRow.deleted
+      ) {
+        return false;
+      }
+      // Comparer les valeurs des colonnes
+      for (const header of prevProps.headers) {
+        if (prevRow[header as keyof EditionRow] !== nextRow[header as keyof EditionRow]) {
+          return false;
+        }
+      }
+    }
+  } else {
+    // Si modifiée, comparer les lignes avec modifications
+    const prevRowWithMod = prevProps.getRowWithModifications(prevProps.row);
+    const nextRowWithMod = nextProps.getRowWithModifications(nextProps.row);
+    for (const header of prevProps.headers) {
+      if (prevRowWithMod[header as keyof EditionRow] !== nextRowWithMod[header as keyof EditionRow]) {
+        return false;
+      }
+    }
+  }
+  
+  if (prevProps.editingCell?.rowIndex === prevProps.rowIndex || nextProps.editingCell?.rowIndex === nextProps.rowIndex) {
+    return false;
+  }
+  if (prevProps.editingValue !== nextProps.editingValue && prevProps.editingCell?.rowIndex === prevProps.rowIndex) {
+    return false;
+  }
+  if (prevProps.categorySuggestion !== nextProps.categorySuggestion) return false;
+  return true;
+});
+
+TableRow.displayName = 'TableRow';
+
+const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   headers,
   rows,
   onRowsChange,
@@ -33,8 +269,9 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
   sortColumn,
   sortDirection,
   categorySuggestions = {},
-}) => {
+}, ref) => {
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; colIndex: number } | null>(null);
+  const [editingValue, setEditingValue] = useState<string>(''); // Valeur temporaire pendant l'édition
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [columnWidths, setColumnWidths] = useState<number[]>([]);
   const [resizingColumn, setResizingColumn] = useState<number | null>(null);
@@ -63,19 +300,6 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
   const extractAccountPrefix = (source: string): string => {
     const match = source.match(/^([A-Za-z0-9]+)_/);
     return match ? match[1].trim().toUpperCase() : 'UNKNOWN';
-  };
-
-  /**
-   * Obtient le nom de compte attendu depuis le Source
-   */
-  const getExpectedAccountName = (source: string): string | null => {
-    const prefix = extractAccountPrefix(source);
-    const accountData = bankAccounts[prefix];
-    if (!accountData) return null;
-    
-    return typeof accountData === 'object' && accountData !== null && 'name' in accountData
-      ? accountData.name
-      : String(accountData);
   };
 
   // Initialiser les largeurs des colonnes
@@ -145,23 +369,110 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
     setResizeStartWidth(columnWidths[colIndex] || 150);
   };
 
-  const handleCellChange = useCallback((rowIndex: number, colIndex: number, value: string) => {
-    const newRows = [...rows];
-    const header = headers[colIndex];
-    const currentRow = newRows[rowIndex];
+  // Refs pour stocker les données et éviter les dépendances instables dans les callbacks
+  const rowsRef = useRef<EditionRow[]>(rows);
+  const headersRef = useRef<string[]>(headers);
+  const bankAccountsRef = useRef<Record<string, any>>(bankAccounts);
+  const onRowsChangeRef = useRef(onRowsChange);
+
+  // Map pour stocker les modifications locales (clé unique -> EditionRow modifié)
+  const localModificationsRef = useRef<Map<string, EditionRow>>(new Map());
+  // Set pour stocker les clés des lignes modifiées (pour forcer le re-render)
+  const [modifiedRowKeys, setModifiedRowKeys] = useState<Set<string>>(new Set());
+
+  // Fonction pour générer une clé unique pour une ligne
+  const getRowKey = useCallback((row: EditionRow): string => {
+    return `${row.Source}|${row.rowIndex ?? ''}|${row.Date}|${row.Libellé}`;
+  }, []);
+
+  // Fonction pour obtenir une ligne avec ses modifications appliquées
+  const getRowWithModifications = useCallback((row: EditionRow): EditionRow => {
+    const key = getRowKey(row);
+    const modifiedRow = localModificationsRef.current.get(key);
+    if (modifiedRow) {
+      return { ...row, ...modifiedRow };
+    }
+    return row;
+  }, [getRowKey]);
+
+  // Mettre à jour les refs quand les props changent
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+  
+  useEffect(() => {
+    headersRef.current = headers;
+  }, [headers]);
+  
+  useEffect(() => {
+    bankAccountsRef.current = bankAccounts;
+  }, [bankAccounts]);
+  
+  useEffect(() => {
+    onRowsChangeRef.current = onRowsChange;
+  }, [onRowsChange]);
+
+  // Exposer les méthodes via ref
+  useImperativeHandle(ref, () => ({
+    getModifiedRows: () => {
+      const modifiedRows: EditionRow[] = [];
+      localModificationsRef.current.forEach((modifiedRow) => {
+        modifiedRows.push(modifiedRow);
+      });
+      return modifiedRows;
+    },
+    clearModifications: () => {
+      localModificationsRef.current.clear();
+      setModifiedRowKeys(new Set());
+    },
+  }), []);
+
+  // Fonction pour mettre à jour uniquement la valeur temporaire pendant l'édition
+  const handleCellChange = useCallback((_rowIndex: number, colIndex: number, value: string) => {
+    const header = headersRef.current[colIndex];
+    
+    // Pour la colonne catégorie, limiter à 1 caractère et transformer en majuscule
+    if (header === 'catégorie') {
+      value = value.toUpperCase().slice(0, 1);
+    }
+    
+    // Mettre à jour uniquement la valeur temporaire
+    setEditingValue(value);
+  }, []);
+
+  // Fonction pour appliquer le changement après validation (stockage local uniquement)
+  const applyCellChange = useCallback((rowIndex: number, colIndex: number, value: string) => {
+    const currentRows = rowsRef.current;
+    const header = headersRef.current[colIndex];
+    const originalRow = currentRows[rowIndex];
     
     // VALIDATION : Empêcher la modification de la catégorie "X"
-    if (header === 'catégorie' && currentRow.catégorie === 'X') {
+    if (header === 'catégorie' && originalRow.catégorie === 'X') {
       alert('La catégorie "X" ne peut pas être modifiée.');
-      return;
+      return false;
+    }
+    
+    // VALIDATION : Pour la colonne catégorie, vérifier qu'il n'y a qu'un seul caractère
+    if (header === 'catégorie') {
+      const normalizedValue = value.trim().toUpperCase();
+      if (normalizedValue.length > 1) {
+        alert('Le code de catégorie doit être exactement un seul caractère');
+        return false;
+      }
+      value = normalizedValue;
     }
     
     // VALIDATION : Empêcher la modification incohérente du champ Compte
-    if (header === 'Compte' && currentRow.Source) {
-      const expectedAccountName = getExpectedAccountName(currentRow.Source);
+    if (header === 'Compte' && originalRow.Source) {
+      const prefix = extractAccountPrefix(originalRow.Source);
+      const accountData = bankAccountsRef.current[prefix];
+      const expectedAccountName = accountData
+        ? (typeof accountData === 'object' && accountData !== null && 'name' in accountData
+          ? accountData.name
+          : String(accountData))
+        : null;
       
       if (expectedAccountName && value !== expectedAccountName) {
-        const prefix = extractAccountPrefix(currentRow.Source);
         console.warn(
           `[CsvEditorTable] Tentative de modification incohérente du Compte: ` +
           `valeur="${value}" vs attendu="${expectedAccountName}" (préfixe: ${prefix})`
@@ -169,7 +480,7 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
         
         // Afficher un avertissement à l'utilisateur
         const confirmed = window.confirm(
-          `Le compte "${value}" ne correspond pas au préfixe du fichier source "${currentRow.Source}" ` +
+          `Le compte "${value}" ne correspond pas au préfixe du fichier source "${originalRow.Source}" ` +
           `(préfixe attendu: ${prefix}).\n\n` +
           `Le compte attendu est "${expectedAccountName}".\n\n` +
           `Voulez-vous corriger automatiquement avec le compte attendu ?`
@@ -183,63 +494,94 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
           // L'utilisateur veut garder sa modification, mais on log quand même
           console.warn(
             `[CsvEditorTable] L'utilisateur a choisi de garder le compte "${value}" ` +
-            `malgré l'incohérence avec le Source "${currentRow.Source}"`
+            `malgré l'incohérence avec le Source "${originalRow.Source}"`
           );
         }
       }
     }
     
+    // Obtenir la ligne actuelle (avec modifications précédentes si elles existent)
+    const rowKey = getRowKey(originalRow);
+    const existingModifiedRow = localModificationsRef.current.get(rowKey);
+    const baseRow = existingModifiedRow || originalRow;
+    
+    // Créer la ligne modifiée
+    let modifiedRow: EditionRow;
+    
     if (header === 'Débit' || header === 'Crédit' || header === 'Solde') {
       // Normaliser les valeurs numériques
       const numValue = parseFloat(value.replace(',', '.').replace(/\s/g, '')) || 0;
       if (header === 'Débit') {
-        newRows[rowIndex] = {
-          ...newRows[rowIndex],
+        modifiedRow = {
+          ...baseRow,
           [header]: numValue !== 0 ? -Math.abs(numValue) : 0,
           modified: true,
         };
       } else if (header === 'Crédit') {
-        newRows[rowIndex] = {
-          ...newRows[rowIndex],
+        modifiedRow = {
+          ...baseRow,
           [header]: numValue !== 0 ? Math.abs(numValue) : 0,
           modified: true,
         };
       } else {
-        newRows[rowIndex] = {
-          ...newRows[rowIndex],
+        modifiedRow = {
+          ...baseRow,
           [header]: numValue,
           modified: true,
         };
       }
     } else {
-      newRows[rowIndex] = {
-        ...newRows[rowIndex],
+      modifiedRow = {
+        ...baseRow,
         [header]: value,
         modified: true,
       };
     }
 
-    onRowsChange(newRows);
-  }, [rows, headers, onRowsChange, bankAccounts]);
+    // Stocker la modification localement
+    localModificationsRef.current.set(rowKey, modifiedRow);
+    
+    // Forcer le re-render de cette ligne uniquement
+    setModifiedRowKeys(prev => new Set(prev).add(rowKey));
+    
+    // NE PLUS appeler onRowsChange - les modifications seront appliquées à la sauvegarde
+    return true;
+  }, [getRowKey]);
 
   const handleCellFocus = useCallback((rowIndex: number, colIndex: number) => {
+    const header = headersRef.current[colIndex];
+    const originalRow = rowsRef.current[rowIndex];
+    const rowWithModifications = getRowWithModifications(originalRow);
+    const currentValue = rowWithModifications[header as keyof EditionRow];
+    const displayValue = formatCellValue(currentValue, header);
     setEditingCell({ rowIndex, colIndex });
-  }, []);
+    setEditingValue(String(displayValue));
+  }, [getRowWithModifications]);
 
   const handleCellBlur = useCallback(() => {
+    // Appliquer le changement avant de fermer l'édition
+    if (editingCell) {
+      applyCellChange(editingCell.rowIndex, editingCell.colIndex, editingValue);
+    }
     // Délai pour permettre les clics sur le menu contextuel
     setTimeout(() => {
       setEditingCell(null);
+      setEditingValue('');
     }, 200);
-  }, []);
+  }, [editingCell, editingValue, applyCellChange]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
-    const totalRows = rows.length;
-    const totalCols = headers.length;
+    const totalRows = rowsRef.current.length;
+    const totalCols = headersRef.current.length;
+    const input = event.target as HTMLInputElement | HTMLTextAreaElement;
 
     switch (event.key) {
       case 'ArrowUp':
         event.preventDefault();
+        // Appliquer le changement avant de se déplacer
+        if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+          applyCellChange(rowIndex, colIndex, editingValue);
+        }
         if (rowIndex > 0) {
           const targetCell = tableRef.current?.querySelector(
             `tbody tr:nth-child(${rowIndex}) td:nth-child(${colIndex + 1}) input, tbody tr:nth-child(${rowIndex}) td:nth-child(${colIndex + 1}) textarea`
@@ -251,6 +593,10 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
 
       case 'ArrowDown':
         event.preventDefault();
+        // Appliquer le changement avant de se déplacer
+        if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+          applyCellChange(rowIndex, colIndex, editingValue);
+        }
         if (rowIndex < totalRows - 1) {
           const targetCell = tableRef.current?.querySelector(
             `tbody tr:nth-child(${rowIndex + 2}) td:nth-child(${colIndex + 1}) input, tbody tr:nth-child(${rowIndex + 2}) td:nth-child(${colIndex + 1}) textarea`
@@ -261,8 +607,12 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
         break;
 
       case 'ArrowLeft':
-        if (event.ctrlKey || (event.target as HTMLInputElement).selectionStart === 0) {
+        if (event.ctrlKey || input.selectionStart === 0) {
           event.preventDefault();
+          // Appliquer le changement avant de se déplacer
+          if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+            applyCellChange(rowIndex, colIndex, editingValue);
+          }
           if (colIndex > 0) {
             const targetCell = tableRef.current?.querySelector(
               `tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${colIndex}) input, tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${colIndex}) textarea`
@@ -277,9 +627,12 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
         break;
 
       case 'ArrowRight':
-        const input = event.target as HTMLInputElement;
         if (event.ctrlKey || input.selectionStart === input.value.length) {
           event.preventDefault();
+          // Appliquer le changement avant de se déplacer
+          if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+            applyCellChange(rowIndex, colIndex, editingValue);
+          }
           if (colIndex < totalCols - 1) {
             const targetCell = tableRef.current?.querySelector(
               `tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${colIndex + 2}) input, tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${colIndex + 2}) textarea`
@@ -292,6 +645,10 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
 
       case 'Tab':
         event.preventDefault();
+        // Appliquer le changement avant de se déplacer
+        if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+          applyCellChange(rowIndex, colIndex, editingValue);
+        }
         const direction = event.shiftKey ? -1 : 1;
         let nextColIndex = colIndex + direction;
         let nextRowIndex = rowIndex;
@@ -314,9 +671,12 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
         break;
 
       case 'Enter':
-        if (headers[colIndex] !== 'Libellé') {
+        if (headersRef.current[colIndex] !== 'Libellé') {
           event.preventDefault();
-          const input = event.target as HTMLInputElement;
+          // Appliquer le changement avant de se déplacer
+          if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+            applyCellChange(rowIndex, colIndex, editingValue);
+          }
           input.blur();
           
           if (rowIndex < totalRows - 1) {
@@ -329,7 +689,7 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
         }
         break;
     }
-  }, [rows.length, headers]);
+  }, [editingCell, editingValue, applyCellChange]);
 
   const handleContextMenu = useCallback((event: React.MouseEvent, rowIndex: number) => {
     event.preventDefault();
@@ -352,11 +712,24 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
     if (onRowDelete && contextMenu) {
       const confirmed = window.confirm('Êtes-vous sûr de vouloir supprimer cette ligne ?');
       if (confirmed) {
+        // Pour les suppressions, on peut les marquer localement aussi
+        // Mais pour l'instant, on propage immédiatement pour garder la cohérence
+        const targetRow = rowsRef.current[contextMenu.targetRowIndex];
+        if (targetRow) {
+          const rowKey = getRowKey(targetRow);
+          // Marquer comme supprimé dans les modifications locales
+          const modifiedRow = localModificationsRef.current.get(rowKey) || { ...targetRow };
+          modifiedRow.deleted = true;
+          modifiedRow.modified = true;
+          localModificationsRef.current.set(rowKey, modifiedRow);
+          setModifiedRowKeys(prev => new Set(prev).add(rowKey));
+        }
+        // Et aussi propager immédiatement pour la cohérence de l'affichage
         onRowDelete(contextMenu.targetRowIndex);
         setContextMenu(null);
       }
     }
-  }, [onRowDelete, contextMenu]);
+  }, [onRowDelete, contextMenu, getRowKey]);
 
   const getSortIcon = (column: string) => {
     if (sortColumn !== column) {
@@ -385,15 +758,6 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
     } else {
       onSort(column, 'asc');
     }
-  };
-
-  const formatCellValue = (value: any, header: string): string => {
-    if (value === null || value === undefined) return '';
-    if (header === 'Débit' || header === 'Crédit' || header === 'Solde') {
-      const num = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
-      return num === 0 ? '0' : num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    return String(value);
   };
 
   return (
@@ -443,66 +807,23 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr
+            <TableRow
               key={`row-${rowIndex}`}
-              className={`${row.modified ? 'modified-row' : ''} ${row.deleted ? 'deleted-row' : ''}`}
-              onContextMenu={(e) => handleContextMenu(e, rowIndex)}
-            >
-              {headers.map((header, colIndex) => {
-                const value = row[header as keyof EditionRow];
-                const displayValue = formatCellValue(value, header);
-                const isLibelle = header === 'Libellé';
-                const isCategory = header === 'catégorie';
-                const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.colIndex === colIndex;
-                const suggestion = categorySuggestions[rowIndex];
-                const hasSuggestion = isCategory && suggestion && (!displayValue || displayValue.trim() === '' || displayValue === '???');
-
-                return (
-                  <td 
-                    key={`${rowIndex}-${colIndex}`}
-                    style={{ width: columnWidths[colIndex] || 'auto' }}
-                  >
-                    {isLibelle ? (
-                      <div className="label-cell-content">
-                        <textarea
-                          value={displayValue}
-                          onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                          onFocus={() => handleCellFocus(rowIndex, colIndex)}
-                          onBlur={handleCellBlur}
-                          onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-                          className="form-control form-control-sm libelle-textarea"
-                          rows={1}
-                        />
-                      </div>
-                    ) : (
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="text"
-                          value={displayValue}
-                          onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                          onFocus={() => handleCellFocus(rowIndex, colIndex)}
-                          onBlur={handleCellBlur}
-                          onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
-                          className="form-control form-control-sm"
-                          style={{
-                            textAlign: header === 'Débit' || header === 'Crédit' || header === 'Solde' ? 'right' : 'left',
-                            ...(isCategory && displayValue === 'X' ? { backgroundColor: '#fee2e2', cursor: 'not-allowed' } : {}),
-                          }}
-                          disabled={isCategory && displayValue === 'X'}
-                          placeholder={hasSuggestion ? `Suggéré: ${suggestion}` : undefined}
-                        />
-                        {hasSuggestion && !isEditing && (
-                          <span className="suggestion-badge">
-                            <span>💡</span>
-                            <span>{suggestion}</span>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
+              row={row}
+              rowIndex={rowIndex}
+              headers={headers}
+              columnWidths={columnWidths}
+              editingCell={editingCell}
+              editingValue={editingValue}
+              categorySuggestion={categorySuggestions[rowIndex]}
+              onContextMenu={handleContextMenu}
+              onCellChange={handleCellChange}
+              onCellFocus={handleCellFocus}
+              onCellBlur={handleCellBlur}
+              onKeyDown={handleKeyDown}
+              getRowWithModifications={getRowWithModifications}
+              modifiedRowKeys={modifiedRowKeys}
+            />
           ))}
         </tbody>
       </table>
@@ -543,7 +864,9 @@ const CsvEditorTable: React.FC<CsvEditorTableProps> = ({
       )}
     </div>
   );
-};
+});
+
+CsvEditorTable.displayName = 'CsvEditorTable';
 
 export default CsvEditorTable;
 

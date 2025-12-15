@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Palette } from 'lucide-react';
 import { AccountsConfig } from '../../types/Account';
 import { ConfigService } from '../../services/ConfigService';
+import { CodeUpdateService } from '../../services/CodeUpdateService';
+import { DataService } from '../../services/DataService';
 import { Button } from '../Common';
 import PalettePreviewModal from './PalettePreviewModal';
 import { PaletteApplication } from '../../types/ColorPalette';
@@ -9,10 +11,11 @@ import { PaletteApplication } from '../../types/ColorPalette';
 const AccountManager: React.FC = () => {
   const [accounts, setAccounts] = useState<AccountsConfig>({});
   const [editingCode, setEditingCode] = useState<string | null>(null);
-  const [editedAccount, setEditedAccount] = useState<{ name: string; color: string } | null>(null);
+  const [editedAccount, setEditedAccount] = useState<{ code: string; name: string; color: string } | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newAccount, setNewAccount] = useState({ code: '', name: '', color: '#0ea5e9' });
   const [showPaletteModal, setShowPaletteModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadAccounts();
@@ -25,16 +28,61 @@ const AccountManager: React.FC = () => {
 
   const handleStartEdit = (code: string) => {
     setEditingCode(code);
-    setEditedAccount({ ...accounts[code] });
+    setEditedAccount({ code, ...accounts[code] });
   };
 
-  const handleSaveEdit = async (code: string) => {
-    if (editedAccount) {
-      const updated = { ...accounts, [code]: editedAccount };
+  const handleSaveEdit = async (oldCode: string) => {
+    if (!editedAccount) return;
+
+    const newCode = editedAccount.code.trim().toUpperCase();
+    
+    // Validation
+    if (!newCode) {
+      alert('Le code ne peut pas être vide');
+      return;
+    }
+
+    // Vérifier si le nouveau code existe déjà (sauf si c'est le même)
+    if (newCode !== oldCode && accounts[newCode]) {
+      alert('Ce code de compte existe déjà');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // Si le code a changé, mettre à jour les fichiers CSV
+      if (newCode !== oldCode) {
+        const { code: _, ...accountData } = editedAccount;
+        const filesModified = await CodeUpdateService.updateAccountCodeInCSV(oldCode, newCode, accountData.name);
+        console.log(`[AccountManager] ${filesModified} fichier(s) CSV mis à jour`);
+        
+        if (filesModified > 0) {
+          // Recharger les données
+          await DataService.reload();
+        }
+      }
+
+      // Mettre à jour la configuration
+      const { code: _, ...accountData } = editedAccount;
+      let updated: AccountsConfig;
+      
+      // Supprimer l'ancien code et ajouter le nouveau
+      if (newCode !== oldCode) {
+        const { [oldCode]: removed, ...rest } = accounts;
+        updated = { ...rest, [newCode]: accountData };
+      } else {
+        updated = { ...accounts, [oldCode]: accountData };
+      }
+
       await ConfigService.saveAccounts(updated);
       setAccounts(updated);
       setEditingCode(null);
       setEditedAccount(null);
+    } catch (error: any) {
+      console.error('[AccountManager] Erreur lors de la sauvegarde:', error);
+      alert(`Erreur lors de la sauvegarde: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -127,8 +175,8 @@ const AccountManager: React.FC = () => {
                 {isEditing ? (
                   <input
                     type="color"
-                    value={displayAccount.color}
-                    onChange={(e) => setEditedAccount({ ...displayAccount, color: e.target.value })}
+                    value={editedAccount?.color || ''}
+                    onChange={(e) => setEditedAccount(editedAccount ? { ...editedAccount, color: e.target.value } : null)}
                     className="w-12 h-12 rounded cursor-pointer"
                   />
                 ) : (
@@ -145,8 +193,17 @@ const AccountManager: React.FC = () => {
                   <div className="space-y-2">
                     <input
                       type="text"
+                      value={editedAccount?.code || ''}
+                      onChange={(e) => setEditedAccount({ ...editedAccount!, code: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                               bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                      placeholder="Code (ex: CCAL, N26...)"
+                      maxLength={20}
+                    />
+                    <input
+                      type="text"
                       value={displayAccount.name}
-                      onChange={(e) => setEditedAccount({ ...displayAccount, name: e.target.value })}
+                      onChange={(e) => setEditedAccount({ ...editedAccount!, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                       placeholder="Nom du compte"
@@ -166,7 +223,8 @@ const AccountManager: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleSaveEdit(code)}
-                      className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors"
+                      disabled={isUpdating}
+                      className="p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Sauvegarder"
                     >
                       <Save size={18} />

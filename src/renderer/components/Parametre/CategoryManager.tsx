@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2, Save, X, Palette } from 'lucide-react';
 import { CategoriesConfig } from '../../types/Category';
 import { ConfigService } from '../../services/ConfigService';
+import { CodeUpdateService } from '../../services/CodeUpdateService';
+import { DataService } from '../../services/DataService';
 import { Button } from '../Common';
 import PalettePreviewModal from './PalettePreviewModal';
 import { PaletteApplication } from '../../types/ColorPalette';
@@ -9,10 +11,11 @@ import { PaletteApplication } from '../../types/ColorPalette';
 const CategoryManager: React.FC = () => {
   const [categories, setCategories] = useState<CategoriesConfig>({});
   const [editingCode, setEditingCode] = useState<string | null>(null);
-  const [editedCategory, setEditedCategory] = useState<{ name: string; color: string } | null>(null);
+  const [editedCategory, setEditedCategory] = useState<{ code: string; name: string; color: string } | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newCategory, setNewCategory] = useState({ code: '', name: '', color: '#0ea5e9' });
   const [showPaletteModal, setShowPaletteModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -29,16 +32,70 @@ const CategoryManager: React.FC = () => {
       return;
     }
     setEditingCode(code);
-    setEditedCategory({ ...categories[code] });
+    setEditedCategory({ code, ...categories[code] });
   };
 
-  const handleSaveEdit = async (code: string) => {
-    if (editedCategory) {
-      const updated = { ...categories, [code]: editedCategory };
+  const handleSaveEdit = async (oldCode: string) => {
+    if (!editedCategory) return;
+
+    const newCode = editedCategory.code.trim().toUpperCase();
+    
+    // Validation
+    if (!newCode) {
+      alert('Le code ne peut pas être vide');
+      return;
+    }
+
+    if (newCode.length !== 1) {
+      alert('Le code doit être exactement un seul caractère');
+      return;
+    }
+
+    if (newCode === 'X') {
+      alert('Le code "X" est réservé et ne peut pas être utilisé.');
+      return;
+    }
+
+    // Vérifier si le nouveau code existe déjà (sauf si c'est le même)
+    if (newCode !== oldCode && categories[newCode]) {
+      alert('Ce code de catégorie existe déjà');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // Si le code a changé, mettre à jour les fichiers CSV
+      if (newCode !== oldCode) {
+        const filesModified = await CodeUpdateService.updateCategoryCodeInCSV(oldCode, newCode);
+        console.log(`[CategoryManager] ${filesModified} fichier(s) CSV mis à jour`);
+        
+        if (filesModified > 0) {
+          // Recharger les données
+          await DataService.reload();
+        }
+      }
+
+      // Mettre à jour la configuration
+      const { code: _, ...categoryData } = editedCategory;
+      let updated: CategoriesConfig;
+      
+      // Supprimer l'ancien code et ajouter le nouveau
+      if (newCode !== oldCode) {
+        const { [oldCode]: removed, ...rest } = categories;
+        updated = { ...rest, [newCode]: categoryData };
+      } else {
+        updated = { ...categories, [oldCode]: categoryData };
+      }
+
       await ConfigService.saveCategories(updated);
       setCategories(updated);
       setEditingCode(null);
       setEditedCategory(null);
+    } catch (error: any) {
+      console.error('[CategoryManager] Erreur lors de la sauvegarde:', error);
+      alert(`Erreur lors de la sauvegarde: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -60,19 +117,26 @@ const CategoryManager: React.FC = () => {
   };
 
   const handleAdd = async () => {
-    if (!newCategory.code || !newCategory.name) {
+    const code = newCategory.code.trim().toUpperCase();
+    
+    if (!code || !newCategory.name) {
       alert('Veuillez remplir tous les champs');
       return;
     }
 
-    if (categories[newCategory.code]) {
+    if (code.length !== 1) {
+      alert('Le code doit être exactement un seul caractère');
+      return;
+    }
+
+    if (categories[code]) {
       alert('Ce code de catégorie existe déjà');
       return;
     }
 
     const updated = {
       ...categories,
-      [newCategory.code]: {
+      [code]: {
         name: newCategory.name,
         color: newCategory.color,
       },
@@ -139,8 +203,8 @@ const CategoryManager: React.FC = () => {
                 {isEditing && code !== 'X' ? (
                   <input
                     type="color"
-                    value={displayCategory.color}
-                    onChange={(e) => setEditedCategory({ ...displayCategory, color: e.target.value })}
+                    value={editedCategory?.color || ''}
+                    onChange={(e) => setEditedCategory(editedCategory ? { ...editedCategory, color: e.target.value } : null)}
                     className="w-10 h-10 rounded cursor-pointer"
                   />
                 ) : (
@@ -154,14 +218,28 @@ const CategoryManager: React.FC = () => {
               {/* Info */}
               <div className="flex-1 min-w-0">
                 {isEditing && code !== 'X' ? (
-                  <input
-                    type="text"
-                    value={displayCategory.name}
-                    onChange={(e) => setEditedCategory({ ...displayCategory, name: e.target.value })}
-                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded
-                             bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                    placeholder="Nom de la catégorie"
-                  />
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editedCategory?.code || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase().slice(0, 1);
+                        setEditedCategory({ ...editedCategory!, code: value });
+                      }}
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded
+                               bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
+                      placeholder="Code (ex: A, B, C...)"
+                      maxLength={1}
+                    />
+                    <input
+                      type="text"
+                      value={displayCategory.name}
+                      onChange={(e) => setEditedCategory({ ...editedCategory!, name: e.target.value })}
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded
+                               bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                      placeholder="Nom de la catégorie"
+                    />
+                  </div>
                 ) : (
                   <>
                     <p className="font-medium text-gray-900 dark:text-white text-sm">{displayCategory.name}</p>
@@ -176,7 +254,8 @@ const CategoryManager: React.FC = () => {
                   <>
                     <button
                       onClick={() => handleSaveEdit(code)}
-                      className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded"
+                      disabled={isUpdating}
+                      className="p-1.5 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Sauvegarder"
                     >
                       <Save size={16} />
@@ -234,10 +313,14 @@ const CategoryManager: React.FC = () => {
               <input
                 type="text"
                 value={newCategory.code}
-                onChange={(e) => setNewCategory({ ...newCategory, code: e.target.value.toUpperCase() })}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().slice(0, 1);
+                  setNewCategory({ ...newCategory, code: value });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                          bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 placeholder="Ex: A, B, C..."
+                maxLength={1}
               />
             </div>
             <div>

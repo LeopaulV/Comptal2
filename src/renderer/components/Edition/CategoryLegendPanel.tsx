@@ -73,19 +73,26 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
   };
 
   const handleAdd = async () => {
-    if (!newCategory.code || !newCategory.name) {
+    const code = newCategory.code.trim().toUpperCase();
+    
+    if (!code || !newCategory.name) {
       alert('Veuillez remplir tous les champs');
       return;
     }
 
-    if (categories[newCategory.code]) {
+    if (code.length !== 1) {
+      alert('Le code doit être exactement un seul caractère');
+      return;
+    }
+
+    if (categories[code]) {
       alert('Ce code de catégorie existe déjà');
       return;
     }
 
     const updated = {
       ...categories,
-      [newCategory.code]: {
+      [code]: {
         name: newCategory.name,
         color: newCategory.color,
       },
@@ -239,9 +246,12 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
               <input
                 type="text"
                 value={newCategory.code}
-                onChange={(e) => setNewCategory({ ...newCategory, code: e.target.value.toUpperCase() })}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().slice(0, 1);
+                  setNewCategory({ ...newCategory, code: value });
+                }}
                 placeholder="Ex: A, B, C..."
-                maxLength={5}
+                maxLength={1}
               />
             </div>
             <div className="form-group">

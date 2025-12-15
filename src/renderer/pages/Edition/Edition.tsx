@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSave, faMagic, faTags, faFilter, faSearch, faCheckCircle, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Loading, EmptyState } from '../../components/Common';
 import SourceFilterPanel from '../../components/Edition/SourceFilterPanel';
 import CategoryFilterPanel from '../../components/Edition/CategoryFilterPanel';
-import CsvEditorTable from '../../components/Edition/CsvEditorTable';
+import CsvEditorTable, { CsvEditorTableRef } from '../../components/Edition/CsvEditorTable';
 import AutoCategorisationReviewModal from '../../components/Edition/AutoCategorisationReviewModal';
 import CategoryLegendPanel from '../../components/Edition/CategoryLegendPanel';
 import { EditionService } from '../../services/EditionService';
@@ -33,6 +33,7 @@ const Edition: React.FC = () => {
   const [pendingAutoCategorisation, setPendingAutoCategorisation] = useState<PendingAutoCategorisation[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isLegendCollapsed, setIsLegendCollapsed] = useState(false);
+  const csvTableRef = useRef<CsvEditorTableRef>(null);
 
   useEffect(() => {
     loadData();
@@ -54,6 +55,9 @@ const Edition: React.FC = () => {
       // Initialiser les sources sélectionnées avec toutes les sources uniques
       const uniqueSources = [...new Set(data.rows.map(row => row.Source))];
       setSelectedSources(uniqueSources);
+      
+      // Réinitialiser les modifications locales après le chargement
+      csvTableRef.current?.clearModifications();
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       alert('Erreur lors du chargement des données. Vérifiez la console pour plus de détails.');
@@ -148,7 +152,18 @@ const Edition: React.FC = () => {
     });
   }, [filteredBySearch, sortColumn, sortDirection]);
 
-  // Calculer les suggestions de catégories pour les lignes sans catégorie
+  // Créer une Map d'indexation pour accès O(1) aux lignes dans allRows
+  const allRowsIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    allRows.forEach((row, index) => {
+      // Créer une clé unique basée sur les propriétés qui identifient une ligne
+      const key = `${row.Source}|${row.rowIndex ?? ''}|${row.Date}|${row.Libellé}`;
+      map.set(key, index);
+    });
+    return map;
+  }, [allRows]);
+
+  // Calculer les suggestions de catégories pour les lignes sans catégorie (optimisé)
   const suggestionsMap = useMemo(() => {
     const suggestions: Record<number, string | null> = {};
     
@@ -156,36 +171,54 @@ const Edition: React.FC = () => {
       const category = row.catégorie || '';
       const isEmpty = !category || category.trim() === '' || category === '???';
       
+      // Ne calculer les suggestions que pour les lignes sans catégorie avec un libellé
       if (isEmpty && row.Libellé) {
         const suggestion = AutoCategorisationService.suggestBestCategory(
           row.Libellé,
           autoCategorisationStats
         );
-        suggestions[index] = suggestion.category;
+        if (suggestion.category) {
+          suggestions[index] = suggestion.category;
+        }
       }
     });
     
     return suggestions;
   }, [sortedRows, autoCategorisationStats]);
 
-  const handleRowsChange = async (newRows: EditionRow[]) => {
-    // Mettre à jour les lignes dans allRows
-    // Pour chaque ligne modifiée dans sortedRows, trouver la ligne correspondante dans allRows
-    const updatedRows = [...allRows];
+  // Refs pour éviter les dépendances instables
+  const allRowsRef = useRef<EditionRow[]>(allRows);
+  const autoCategorisationStatsRef = useRef<WordStatsMap>(autoCategorisationStats);
+  
+  useEffect(() => {
+    allRowsRef.current = allRows;
+  }, [allRows]);
+  
+  useEffect(() => {
+    autoCategorisationStatsRef.current = autoCategorisationStats;
+  }, [autoCategorisationStats]);
+
+  const handleRowsChange = useCallback(async (newRows: EditionRow[]) => {
+    // Mettre à jour les lignes dans allRows en utilisant la Map d'indexation
+    const currentAllRows = [...allRowsRef.current];
+    const currentIndexMap = new Map<string, number>();
+    
+    // Reconstruire la map pour les lignes actuelles
+    currentAllRows.forEach((row, index) => {
+      const key = `${row.Source}|${row.rowIndex ?? ''}|${row.Date}|${row.Libellé}`;
+      currentIndexMap.set(key, index);
+    });
+    
     let statsUpdated = false;
-    let updatedStats = { ...autoCategorisationStats };
+    let updatedStats = { ...autoCategorisationStatsRef.current };
     
     newRows.forEach((modifiedRow) => {
-      // Trouver l'index dans allRows en utilisant les propriétés uniques
-      const allRowIndex = allRows.findIndex(r => 
-        r.Source === modifiedRow.Source &&
-        r.rowIndex === modifiedRow.rowIndex &&
-        r.Date === modifiedRow.Date &&
-        r.Libellé === modifiedRow.Libellé
-      );
+      // Utiliser la Map pour accès O(1) au lieu de findIndex O(n)
+      const key = `${modifiedRow.Source}|${modifiedRow.rowIndex ?? ''}|${modifiedRow.Date}|${modifiedRow.Libellé}`;
+      const allRowIndex = currentIndexMap.get(key);
       
-      if (allRowIndex >= 0) {
-        const oldRow = allRows[allRowIndex];
+      if (allRowIndex !== undefined && allRowIndex >= 0) {
+        const oldRow = currentAllRows[allRowIndex];
         const newCategory = modifiedRow.catégorie || '';
         const oldCategory = oldRow.catégorie || '';
         
@@ -199,11 +232,11 @@ const Edition: React.FC = () => {
           statsUpdated = true;
         }
         
-        updatedRows[allRowIndex] = { ...modifiedRow };
+        currentAllRows[allRowIndex] = { ...modifiedRow };
       }
     });
     
-    setAllRows(updatedRows);
+    setAllRows(currentAllRows);
     
     // Sauvegarder les stats si elles ont été mises à jour
     if (statsUpdated) {
@@ -214,9 +247,9 @@ const Edition: React.FC = () => {
         console.error('Erreur lors de la sauvegarde des stats d\'auto-catégorisation:', error);
       }
     }
-  };
+  }, []);
 
-  const handleRowInsert = (targetRowIndex: number, position: 'above' | 'below') => {
+  const handleRowInsert = useCallback((targetRowIndex: number, position: 'above' | 'below') => {
     if (targetRowIndex < 0 || targetRowIndex >= sortedRows.length) return;
     
     const targetRow = sortedRows[targetRowIndex];
@@ -234,34 +267,27 @@ const Edition: React.FC = () => {
       deleted: false,
     };
     
-    // Trouver l'index dans allRows en utilisant les propriétés uniques
-    const allRowIndex = allRows.findIndex(r => 
-      r.Source === targetRow.Source &&
-      r.rowIndex === targetRow.rowIndex &&
-      r.Date === targetRow.Date &&
-      r.Libellé === targetRow.Libellé
-    );
+    // Utiliser la Map d'indexation pour accès O(1)
+    const key = `${targetRow.Source}|${targetRow.rowIndex ?? ''}|${targetRow.Date}|${targetRow.Libellé}`;
+    const allRowIndex = allRowsIndexMap.get(key);
     
-    if (allRowIndex >= 0) {
+    if (allRowIndex !== undefined && allRowIndex >= 0) {
       const insertIndex = position === 'above' ? allRowIndex : allRowIndex + 1;
       const newAllRows = [...allRows];
       newAllRows.splice(insertIndex, 0, newRow);
       setAllRows(newAllRows);
     }
-  };
+  }, [sortedRows, allRowsIndexMap, allRows]);
 
-  const handleRowDelete = (rowIndex: number) => {
+  const handleRowDelete = useCallback((rowIndex: number) => {
     if (rowIndex < 0 || rowIndex >= sortedRows.length) return;
     
     const targetRow = sortedRows[rowIndex];
-    const allRowIndex = allRows.findIndex(r => 
-      r.Source === targetRow.Source &&
-      r.rowIndex === targetRow.rowIndex &&
-      r.Date === targetRow.Date &&
-      r.Libellé === targetRow.Libellé
-    );
+    // Utiliser la Map d'indexation pour accès O(1)
+    const key = `${targetRow.Source}|${targetRow.rowIndex ?? ''}|${targetRow.Date}|${targetRow.Libellé}`;
+    const allRowIndex = allRowsIndexMap.get(key);
     
-    if (allRowIndex >= 0) {
+    if (allRowIndex !== undefined && allRowIndex >= 0) {
       const newAllRows = [...allRows];
       newAllRows[allRowIndex] = {
         ...newAllRows[allRowIndex],
@@ -270,23 +296,79 @@ const Edition: React.FC = () => {
       };
       setAllRows(newAllRows);
     }
-  };
+  }, [sortedRows, allRowsIndexMap, allRows]);
 
-  const handleSort = (column: string, direction: 'asc' | 'desc' | null) => {
+  const handleSort = useCallback((column: string, direction: 'asc' | 'desc' | null) => {
     setSortColumn(direction ? column : null);
     setSortDirection(direction);
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     setSaving(true);
     setIsDataLoading(true);
     try {
-      // Récupérer toutes les lignes modifiées ou supprimées
-      const rowsToSave = allRows.filter(row => row.modified || row.deleted);
+      // Récupérer les modifications locales depuis CsvEditorTable
+      const modifiedRows = csvTableRef.current?.getModifiedRows() || [];
       
-      if (rowsToSave.length === 0) {
-        alert(t('edition.noChanges'));
-        return;
+      if (modifiedRows.length === 0) {
+        // Vérifier aussi les lignes déjà modifiées dans allRows (pour compatibilité)
+        const rowsToSave = allRows.filter(row => row.modified || row.deleted);
+        if (rowsToSave.length === 0) {
+          alert(t('edition.noChanges'));
+          return;
+        }
+      } else {
+        // Appliquer toutes les modifications locales à allRows en une seule fois
+        const updatedRows = [...allRows];
+        const currentIndexMap = new Map<string, number>();
+        
+        // Reconstruire la map pour les lignes actuelles
+        updatedRows.forEach((row, index) => {
+          const key = `${row.Source}|${row.rowIndex ?? ''}|${row.Date}|${row.Libellé}`;
+          currentIndexMap.set(key, index);
+        });
+        
+        let statsUpdated = false;
+        let updatedStats = { ...autoCategorisationStats };
+        
+        // Appliquer toutes les modifications
+        modifiedRows.forEach((modifiedRow) => {
+          const key = `${modifiedRow.Source}|${modifiedRow.rowIndex ?? ''}|${modifiedRow.Date}|${modifiedRow.Libellé}`;
+          const allRowIndex = currentIndexMap.get(key);
+          
+          if (allRowIndex !== undefined && allRowIndex >= 0) {
+            const oldRow = updatedRows[allRowIndex];
+            const newCategory = modifiedRow.catégorie || '';
+            const oldCategory = oldRow.catégorie || '';
+            
+            // Si la catégorie a changé et n'est pas vide, mettre à jour les stats
+            if (newCategory !== oldCategory && newCategory.trim() !== '' && modifiedRow.Libellé) {
+              updatedStats = AutoCategorisationService.updateStatsForLabel(
+                modifiedRow.Libellé,
+                newCategory,
+                updatedStats
+              );
+              statsUpdated = true;
+            }
+            
+            updatedRows[allRowIndex] = { ...modifiedRow };
+          }
+        });
+        
+        setAllRows(updatedRows);
+        
+        // Sauvegarder les stats si elles ont été mises à jour
+        if (statsUpdated) {
+          try {
+            await ConfigService.saveAutoCategorisationStats(updatedStats);
+            setAutoCategorisationStats(updatedStats);
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde des stats d\'auto-catégorisation:', error);
+          }
+        }
+        
+        // Nettoyer les modifications locales
+        csvTableRef.current?.clearModifications();
       }
       
       // Sauvegarder toutes les lignes (le service gère le regroupement par fichier)
@@ -303,9 +385,9 @@ const Edition: React.FC = () => {
       setSaving(false);
       setIsDataLoading(false);
     }
-  };
+  }, [allRows, autoCategorisationStats, t]);
 
-  const handleCleanDuplicates = async () => {
+  const handleCleanDuplicates = useCallback(async () => {
     if (!window.confirm(t('edition.cleanConfirm'))) {
       return;
     }
@@ -321,9 +403,9 @@ const Edition: React.FC = () => {
     } finally {
       setIsDataLoading(false);
     }
-  };
+  }, [t]);
 
-  const handleAutoCategorize = async () => {
+  const handleAutoCategorize = useCallback(async () => {
     try {
       setIsDataLoading(true);
       
@@ -386,30 +468,31 @@ const Edition: React.FC = () => {
     } finally {
       setIsDataLoading(false);
     }
-  };
+  }, [sortedRows, autoCategorisationStats, t]);
 
-  const handleConfirmAutoCategorisation = async (selectedSuggestions: PendingAutoCategorisation[]) => {
+  const handleConfirmAutoCategorisation = useCallback(async (selectedSuggestions: PendingAutoCategorisation[]) => {
     try {
       setIsDataLoading(true);
-      const updatedRows = [...allRows];
+      const currentAllRows = [...allRowsRef.current];
       let statsUpdated = false;
-      let updatedStats = { ...autoCategorisationStats };
+      let updatedStats = { ...autoCategorisationStatsRef.current };
       let categorizedCount = 0;
 
       // Appliquer les catégories sélectionnées
+      // Note: On garde findIndex ici car cette fonction est appelée moins fréquemment
+      // et les suggestions sont généralement en petit nombre
       for (const suggestion of selectedSuggestions) {
         if (!suggestion.selected) continue;
 
-        // Trouver la ligne correspondante dans allRows
-        const rowIndex = allRows.findIndex(r => 
+        const rowIndex = currentAllRows.findIndex(r => 
           r.Source === suggestion.source &&
           r.Date === suggestion.date &&
           r.Libellé === suggestion.libelle
         );
 
         if (rowIndex >= 0 && suggestion.suggestedCategory) {
-          updatedRows[rowIndex] = {
-            ...updatedRows[rowIndex],
+          currentAllRows[rowIndex] = {
+            ...currentAllRows[rowIndex],
             catégorie: suggestion.suggestedCategory,
             modified: true,
           };
@@ -425,7 +508,7 @@ const Edition: React.FC = () => {
         }
       }
 
-      setAllRows(updatedRows);
+      setAllRows(currentAllRows);
       
       // Sauvegarder les stats si elles ont été mises à jour
       if (statsUpdated) {
@@ -444,7 +527,7 @@ const Edition: React.FC = () => {
     } finally {
       setIsDataLoading(false);
     }
-  };
+  }, [t]);
 
 
   if (isLoading) {
@@ -597,6 +680,7 @@ const Edition: React.FC = () => {
               )
             ) : (
               <CsvEditorTable
+                ref={csvTableRef}
                 headers={headers}
                 rows={sortedRows}
                 onRowsChange={handleRowsChange}
