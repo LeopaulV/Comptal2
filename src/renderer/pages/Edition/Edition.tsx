@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef, useDeferredValue, startTransition } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDebounce } from 'use-debounce';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSave, faMagic, faTags, faFilter, faSearch, faCheckCircle, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Loading, EmptyState } from '../../components/Common';
@@ -25,6 +26,7 @@ const Edition: React.FC = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showUncategorized, setShowUncategorized] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
   const [activeFilterTab, setActiveFilterTab] = useState<'source' | 'category'>('source');
@@ -76,12 +78,18 @@ const Edition: React.FC = () => {
     }
   };
 
+  // Convertir selectedSources en Set pour accès O(1)
+  const selectedSourcesSet = useMemo(() => new Set(selectedSources), [selectedSources]);
+  
   // Filtrer les lignes selon les sources sélectionnées
   const filteredBySource = useMemo(() => {
     if (selectedSources.length === 0) return [];
-    return allRows.filter(row => selectedSources.includes(row.Source));
-  }, [allRows, selectedSources]);
+    return allRows.filter(row => selectedSourcesSet.has(row.Source));
+  }, [allRows, selectedSourcesSet, selectedSources.length]);
 
+  // Convertir selectedCategories en Set pour accès O(1)
+  const selectedCategoriesSet = useMemo(() => new Set(selectedCategories), [selectedCategories]);
+  
   // Filtrer les lignes selon les catégories sélectionnées
   const filteredByCategory = useMemo(() => {
     return filteredBySource.filter(row => {
@@ -96,22 +104,26 @@ const Edition: React.FC = () => {
         return false;
       }
       
-      return selectedCategories.includes(category);
+      return selectedCategoriesSet.has(category);
     });
-  }, [filteredBySource, selectedCategories, showUncategorized]);
+  }, [filteredBySource, selectedCategoriesSet, selectedCategories.length, showUncategorized]);
 
-  // Filtrer par recherche textuelle
+  // Utiliser useDeferredValue pour différer les recalculs de filtres non critiques
+  const deferredFilteredByCategory = useDeferredValue(filteredByCategory);
+  const deferredSearchTerm = useDeferredValue(debouncedSearchTerm);
+  
+  // Filtrer par recherche textuelle (avec debouncing)
   const filteredBySearch = useMemo(() => {
-    if (!searchTerm.trim()) return filteredByCategory;
+    if (!deferredSearchTerm.trim()) return deferredFilteredByCategory;
     
-    const term = searchTerm.toLowerCase();
-    return filteredByCategory.filter(row => {
+    const term = deferredSearchTerm.toLowerCase();
+    return deferredFilteredByCategory.filter(row => {
       return Object.values(row).some(value => {
         if (value === null || value === undefined) return false;
         return String(value).toLowerCase().includes(term);
       });
     });
-  }, [filteredByCategory, searchTerm]);
+  }, [deferredFilteredByCategory, deferredSearchTerm]);
 
   // Trier les lignes
   const sortedRows = useMemo(() => {
@@ -164,27 +176,13 @@ const Edition: React.FC = () => {
   }, [allRows]);
 
   // Calculer les suggestions de catégories pour les lignes sans catégorie (optimisé)
+  // Note: Les suggestions seront calculées de manière lazy dans CsvEditorTable
+  // pour ne calculer que les lignes visibles
   const suggestionsMap = useMemo(() => {
-    const suggestions: Record<number, string | null> = {};
-    
-    sortedRows.forEach((row, index) => {
-      const category = row.catégorie || '';
-      const isEmpty = !category || category.trim() === '' || category === '???';
-      
-      // Ne calculer les suggestions que pour les lignes sans catégorie avec un libellé
-      if (isEmpty && row.Libellé) {
-        const suggestion = AutoCategorisationService.suggestBestCategory(
-          row.Libellé,
-          autoCategorisationStats
-        );
-        if (suggestion.category) {
-          suggestions[index] = suggestion.category;
-        }
-      }
-    });
-    
-    return suggestions;
-  }, [sortedRows, autoCategorisationStats]);
+    // Retourner un objet vide par défaut - les suggestions seront calculées à la demande
+    // dans CsvEditorTable pour les lignes visibles uniquement
+    return {};
+  }, []);
 
   // Refs pour éviter les dépendances instables
   const allRowsRef = useRef<EditionRow[]>(allRows);
@@ -299,8 +297,10 @@ const Edition: React.FC = () => {
   }, [sortedRows, allRowsIndexMap, allRows]);
 
   const handleSort = useCallback((column: string, direction: 'asc' | 'desc' | null) => {
-    setSortColumn(direction ? column : null);
-    setSortDirection(direction);
+    startTransition(() => {
+      setSortColumn(direction ? column : null);
+      setSortDirection(direction);
+    });
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -609,7 +609,11 @@ const Edition: React.FC = () => {
               <SourceFilterPanel
                 rows={allRows}
                 selectedSources={selectedSources}
-                onSourcesChange={setSelectedSources}
+                onSourcesChange={(sources) => {
+                  startTransition(() => {
+                    setSelectedSources(sources);
+                  });
+                }}
               />
             </div>
 
@@ -619,8 +623,10 @@ const Edition: React.FC = () => {
                 selectedCategories={selectedCategories}
                 showUncategorized={showUncategorized}
                 onCategoryFilterChange={(categories, showUncat) => {
-                  setSelectedCategories(categories);
-                  setShowUncategorized(showUncat);
+                  startTransition(() => {
+                    setSelectedCategories(categories);
+                    setShowUncategorized(showUncat);
+                  });
                 }}
               />
             </div>

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, memo, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useImperativeHandle, forwardRef, startTransition, useMemo, useDeferredValue } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faTrashAlt, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 import { EditionRow } from '../../types/Edition';
 import { ConfigService } from '../../services/ConfigService';
+import { AutoCategorisationService } from '../../services/AutoCategorisationService';
 
 interface CsvEditorTableProps {
   headers: string[];
@@ -207,10 +208,10 @@ const TableRow = memo<TableRowProps>(({
     </tr>
   );
 }, (prevProps, nextProps) => {
-  // Comparaison personnalisée pour optimiser les re-renders
+  // Comparaison simplifiée et optimisée pour les re-renders
   if (prevProps.rowIndex !== nextProps.rowIndex) return false;
   
-  // Vérifier si la ligne a été modifiée
+  // Comparer les clés de modification
   const prevRowKey = `${prevProps.row.Source}|${prevProps.row.rowIndex ?? ''}|${prevProps.row.Date}|${prevProps.row.Libellé}`;
   const nextRowKey = `${nextProps.row.Source}|${nextProps.row.rowIndex ?? ''}|${nextProps.row.Date}|${nextProps.row.Libellé}`;
   const prevIsModified = prevProps.modifiedRowKeys.has(prevRowKey);
@@ -218,42 +219,40 @@ const TableRow = memo<TableRowProps>(({
   
   if (prevIsModified !== nextIsModified) return false;
   
-  // Si la ligne n'est pas modifiée, comparer les valeurs originales
-  if (!prevIsModified && !nextIsModified) {
-    if (prevProps.row !== nextProps.row) {
-      const prevRow = prevProps.row;
-      const nextRow = nextProps.row;
-      if (
-        prevRow.modified !== nextRow.modified ||
-        prevRow.deleted !== nextRow.deleted
-      ) {
-        return false;
-      }
-      // Comparer les valeurs des colonnes
-      for (const header of prevProps.headers) {
-        if (prevRow[header as keyof EditionRow] !== nextRow[header as keyof EditionRow]) {
-          return false;
-        }
-      }
-    }
-  } else {
-    // Si modifiée, comparer les lignes avec modifications
-    const prevRowWithMod = prevProps.getRowWithModifications(prevProps.row);
-    const nextRowWithMod = nextProps.getRowWithModifications(nextProps.row);
-    for (const header of prevProps.headers) {
-      if (prevRowWithMod[header as keyof EditionRow] !== nextRowWithMod[header as keyof EditionRow]) {
-        return false;
-      }
-    }
+  // Comparer l'état d'édition
+  const prevIsEditing = prevProps.editingCell?.rowIndex === prevProps.rowIndex;
+  const nextIsEditing = nextProps.editingCell?.rowIndex === nextProps.rowIndex;
+  if (prevIsEditing !== nextIsEditing) return false;
+  
+  // Si on édite cette ligne, vérifier les valeurs d'édition
+  if (prevIsEditing && nextIsEditing) {
+    if (prevProps.editingCell?.colIndex !== nextProps.editingCell?.colIndex) return false;
+    if (prevProps.editingValue !== nextProps.editingValue) return false;
   }
   
-  if (prevProps.editingCell?.rowIndex === prevProps.rowIndex || nextProps.editingCell?.rowIndex === nextProps.rowIndex) {
-    return false;
-  }
-  if (prevProps.editingValue !== nextProps.editingValue && prevProps.editingCell?.rowIndex === prevProps.rowIndex) {
-    return false;
-  }
+  // Comparer la suggestion de catégorie
   if (prevProps.categorySuggestion !== nextProps.categorySuggestion) return false;
+  
+  // Comparer les références des objets (si la ligne n'a pas changé, la référence devrait être la même)
+  if (prevProps.row !== nextProps.row) {
+    // Si la référence a changé, vérifier les valeurs des colonnes importantes
+    // pour détecter les changements de filtres/tri
+    const importantFields: (keyof EditionRow)[] = ['Source', 'Date', 'Libellé', 'catégorie', 'Débit', 'Crédit', 'Solde', 'Compte'];
+    for (const field of importantFields) {
+      if (prevProps.row[field] !== nextProps.row[field]) {
+        return false; // Les données ont changé, besoin de re-render
+      }
+    }
+    
+    // Vérifier les propriétés critiques
+    if (prevProps.row.modified !== nextProps.row.modified) return false;
+    if (prevProps.row.deleted !== nextProps.row.deleted) return false;
+  }
+  
+  // Comparer les références des tableaux
+  if (prevProps.headers !== nextProps.headers) return false;
+  if (prevProps.columnWidths !== nextProps.columnWidths) return false;
+  
   return true;
 });
 
@@ -268,7 +267,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   onSort,
   sortColumn,
   sortDirection,
-  categorySuggestions = {},
+  categorySuggestions: _categorySuggestions = {}, // Non utilisé, calculé à la demande maintenant
 }, ref) => {
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; colIndex: number } | null>(null);
   const [editingValue, setEditingValue] = useState<string>(''); // Valeur temporaire pendant l'édition
@@ -379,6 +378,25 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   const localModificationsRef = useRef<Map<string, EditionRow>>(new Map());
   // Set pour stocker les clés des lignes modifiées (pour forcer le re-render)
   const [modifiedRowKeys, setModifiedRowKeys] = useState<Set<string>>(new Set());
+  
+  // Cache pour les suggestions de catégories (calculées à la demande pour les lignes visibles)
+  const suggestionsCacheRef = useRef<Map<number, string | null>>(new Map());
+  const autoCategorisationStatsRef = useRef<any>(null);
+  
+  // Charger les stats d'auto-catégorisation pour les suggestions
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const stats = await ConfigService.loadAutoCategorisationStats();
+        autoCategorisationStatsRef.current = stats;
+        // Vider le cache quand les stats changent
+        suggestionsCacheRef.current.clear();
+      } catch (error) {
+        console.error('Erreur lors du chargement des stats pour suggestions:', error);
+      }
+    };
+    loadStats();
+  }, []);
 
   // Fonction pour générer une clé unique pour une ligne
   const getRowKey = useCallback((row: EditionRow): string => {
@@ -398,6 +416,8 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   // Mettre à jour les refs quand les props changent
   useEffect(() => {
     rowsRef.current = rows;
+    // Vider le cache des suggestions quand les lignes changent
+    suggestionsCacheRef.current.clear();
   }, [rows]);
   
   useEffect(() => {
@@ -541,8 +561,14 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     // Stocker la modification localement
     localModificationsRef.current.set(rowKey, modifiedRow);
     
-    // Forcer le re-render de cette ligne uniquement
-    setModifiedRowKeys(prev => new Set(prev).add(rowKey));
+    // Batch les mises à jour avec startTransition pour éviter les re-renders bloquants
+    startTransition(() => {
+      setModifiedRowKeys(prev => {
+        const newSet = new Set(prev);
+        newSet.add(rowKey);
+        return newSet;
+      });
+    });
     
     // NE PLUS appeler onRowsChange - les modifications seront appliquées à la sauvegarde
     return true;
@@ -722,7 +748,13 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
           modifiedRow.deleted = true;
           modifiedRow.modified = true;
           localModificationsRef.current.set(rowKey, modifiedRow);
-          setModifiedRowKeys(prev => new Set(prev).add(rowKey));
+          startTransition(() => {
+            setModifiedRowKeys(prev => {
+              const newSet = new Set(prev);
+              newSet.add(rowKey);
+              return newSet;
+            });
+          });
         }
         // Et aussi propager immédiatement pour la cohérence de l'affichage
         onRowDelete(contextMenu.targetRowIndex);
@@ -730,6 +762,31 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       }
     }
   }, [onRowDelete, contextMenu, getRowKey]);
+
+  // Fonction pour obtenir une suggestion de catégorie (lazy loading)
+  const getCategorySuggestion = useCallback((rowIndex: number, row: EditionRow): string | null | undefined => {
+    // Vérifier le cache d'abord
+    if (suggestionsCacheRef.current.has(rowIndex)) {
+      return suggestionsCacheRef.current.get(rowIndex);
+    }
+    
+    // Calculer la suggestion seulement si nécessaire
+    const category = row.catégorie || '';
+    const isEmpty = !category || category.trim() === '' || category === '???';
+    
+    if (isEmpty && row.Libellé && autoCategorisationStatsRef.current) {
+      const suggestion = AutoCategorisationService.suggestBestCategory(
+        row.Libellé,
+        autoCategorisationStatsRef.current
+      );
+      const suggestionValue = suggestion.category || null;
+      suggestionsCacheRef.current.set(rowIndex, suggestionValue);
+      return suggestionValue;
+    }
+    
+    suggestionsCacheRef.current.set(rowIndex, null);
+    return null;
+  }, []);
 
   const getSortIcon = (column: string) => {
     if (sortColumn !== column) {
@@ -759,9 +816,383 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       onSort(column, 'asc');
     }
   };
+  
+  // Seuil pour activer la virtualisation (désactivée pour petits datasets pour éviter les clignotements)
+  const VIRTUALIZATION_THRESHOLD = 500;
+  const shouldVirtualize = rows.length >= VIRTUALIZATION_THRESHOLD;
+  
+  // Virtualisation simple : ne rendre que les lignes visibles
+  // Initialiser visibleRange en fonction du nombre de lignes (toutes les lignes si < seuil)
+  const [visibleRange, setVisibleRange] = useState(() => {
+    const initialEnd = rows.length >= VIRTUALIZATION_THRESHOLD ? Math.min(100, rows.length) : rows.length;
+    return { start: 0, end: initialEnd };
+  });
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const previousRowsLengthRef = useRef<number>(0);
+  const measuredRowHeightRef = useRef<number | null>(null); // Hauteur mesurée dynamiquement
+  const rowHeightMeasurementsRef = useRef<number[]>([]); // Cache des hauteurs mesurées
+  const isScrollingRef = useRef<boolean>(false); // Suivre l'état de scroll pour désactiver les mesures
+  const frozenRowHeightRef = useRef<number | null>(null); // Hauteur gelée pendant le scroll
+  const OVERSCAN = 20; // Nombre de lignes à rendre en plus au-dessus et en-dessous
+  const ROW_HEIGHT_FALLBACK = 50; // Hauteur de fallback si la mesure n'est pas encore disponible
+  const SCROLL_UPDATE_THRESHOLD = 12; // Seuil minimum de lignes avant de mettre à jour visibleRange (augmenté pour scroll rapide)
+  const SCROLL_DEBOUNCE_MS = 150; // Délai de debounce pour les mises à jour de scroll
+  const SCROLL_THROTTLE_MS = 16; // Throttle à ~60fps (16ms)
+  
+  // Mesurer la hauteur réelle des lignes après le premier render
+  // Pour les petits datasets, on peut réduire la fréquence des mesures
+  useEffect(() => {
+    if (!tbodyRef.current || rows.length === 0) return;
+    
+    const measureRowHeight = () => {
+      // Ne pas mesurer pendant le scroll actif
+      if (isScrollingRef.current) {
+        return;
+      }
+      
+      const firstRow = tbodyRef.current?.querySelector('tr:not([style*="visibility: hidden"])');
+      if (firstRow) {
+        const height = firstRow.getBoundingClientRect().height;
+        if (height > 0) {
+          // Validation : éviter les hauteurs aberrantes (trop petites ou trop grandes)
+          const minHeight = 30;
+          const maxHeight = 200;
+          if (height < minHeight || height > maxHeight) {
+            return;
+          }
+          
+          // Pour les petits datasets, utiliser une moyenne plus stable (moins de mesures)
+          const maxMeasurements = shouldVirtualize ? 10 : 3;
+          rowHeightMeasurementsRef.current.push(height);
+          if (rowHeightMeasurementsRef.current.length > maxMeasurements) {
+            rowHeightMeasurementsRef.current.shift();
+          }
+          const averageHeight = rowHeightMeasurementsRef.current.reduce((a, b) => a + b, 0) / rowHeightMeasurementsRef.current.length;
+          const roundedHeight = Math.round(averageHeight);
+          
+          // Ne mettre à jour que si la différence est significative (éviter les micro-changements)
+          // Pour les petits datasets, on peut être plus strict sur les changements
+          const threshold = shouldVirtualize ? 2 : 5;
+          if (!measuredRowHeightRef.current || Math.abs(roundedHeight - measuredRowHeightRef.current) >= threshold) {
+            measuredRowHeightRef.current = roundedHeight;
+          }
+        }
+      }
+    };
+    
+    // Mesurer après un court délai pour laisser le DOM se stabiliser
+    // Pour les petits datasets, délai plus court car le DOM est plus simple
+    const delay = shouldVirtualize ? 100 : 50;
+    const timeoutId = setTimeout(measureRowHeight, delay);
+    
+    // Observer les changements de taille des lignes (gère automatiquement les changements de hauteur)
+    // Pour les petits datasets, observer moins de lignes
+    const resizeObserver = new ResizeObserver(() => {
+      // Ne pas mesurer pendant le scroll actif
+      if (!isScrollingRef.current) {
+        measureRowHeight();
+      }
+    });
+    
+    // Observer plusieurs lignes pour une mesure plus précise
+    const rowsToObserve = tbodyRef.current.querySelectorAll('tr:not([style*="visibility: hidden"])');
+    const maxObservedRows = shouldVirtualize ? 3 : 1; // Observer moins de lignes pour les petits datasets
+    rowsToObserve.forEach((row, index) => {
+      if (index < maxObservedRows) {
+        resizeObserver.observe(row);
+      }
+    });
+    
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [rows.length, shouldVirtualize]); // Mesurer seulement quand le nombre de lignes change ou si le mode de virtualisation change
+  
+  // Obtenir la hauteur effective à utiliser pour les calculs
+  const getEffectiveRowHeight = useCallback(() => {
+    // Pendant le scroll, utiliser la hauteur gelée si disponible
+    if (isScrollingRef.current && frozenRowHeightRef.current !== null) {
+      return frozenRowHeightRef.current;
+    }
+    // Sinon, utiliser la hauteur mesurée ou le fallback
+    return measuredRowHeightRef.current || ROW_HEIGHT_FALLBACK;
+  }, []);
+  
+  // Mettre à jour visibleRange quand shouldVirtualize change
+  useEffect(() => {
+    if (shouldVirtualize) {
+      // Activer la virtualisation : limiter la plage visible
+      setVisibleRange({ start: 0, end: Math.min(100, rows.length) });
+    } else {
+      // Désactiver la virtualisation : inclure toutes les lignes
+      setVisibleRange({ start: 0, end: rows.length });
+    }
+  }, [shouldVirtualize, rows.length]);
+  
+  // Réinitialiser la plage visible quand le nombre de lignes change significativement
+  // ou quand les lignes elles-mêmes changent (filtres/recherche)
+  const rowsKeyRef = useRef<string>('');
+  
+  useEffect(() => {
+    const previousLength = previousRowsLengthRef.current;
+    const currentLength = rows.length;
+    
+    // Créer une clé basée sur les premières et dernières lignes pour détecter les changements de contenu
+    const currentRowsKey = rows.length > 0 
+      ? `${rows[0]?.Source}|${rows[0]?.Date}|${rows[rows.length - 1]?.Source}|${rows[rows.length - 1]?.Date}|${rows.length}`
+      : `empty|${rows.length}`;
+    
+    const rowsChanged = rowsKeyRef.current !== currentRowsKey;
+    rowsKeyRef.current = currentRowsKey;
+    
+    // Si le nombre de lignes a beaucoup changé OU si les lignes ont changé (filtre/recherche)
+    if (rowsChanged && (previousLength === 0 || Math.abs(currentLength - previousLength) > 50 || rowsChanged)) {
+      // Pour les petits datasets, initialiser la plage pour inclure toutes les lignes
+      // Pour les gros datasets, utiliser la virtualisation
+      if (shouldVirtualize) {
+        setVisibleRange({ start: 0, end: Math.min(100, currentLength) });
+      } else {
+        // Pour les petits datasets, inclure toutes les lignes
+        setVisibleRange({ start: 0, end: currentLength });
+      }
+      
+      // Réinitialiser le scroll si le conteneur existe
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
+      
+      // Forcer un re-render en vidant le cache des suggestions
+      suggestionsCacheRef.current.clear();
+      // Réinitialiser les mesures de hauteur seulement si nécessaire
+      if (shouldVirtualize) {
+        rowHeightMeasurementsRef.current = [];
+        measuredRowHeightRef.current = null;
+      }
+    }
+    
+    previousRowsLengthRef.current = currentLength;
+  }, [rows, shouldVirtualize]);
+  
+  // Calculer les lignes visibles basées sur le scroll (optimisé)
+  const [pendingVisibleRange, setPendingVisibleRange] = useState({ start: 0, end: 100 });
+  // useDeferredValue doit toujours être appelé (règle des hooks), mais on l'utilise seulement si nécessaire
+  const deferredVisibleRange = useDeferredValue(pendingVisibleRange);
+  
+  // Synchroniser deferredVisibleRange avec visibleRange (seulement si virtualisation active)
+  // Pour les petits datasets, utiliser directement pendingVisibleRange sans délai
+  useEffect(() => {
+    if (shouldVirtualize) {
+      setVisibleRange(deferredVisibleRange);
+    } else {
+      // Pour les petits datasets, utiliser directement la plage sans délai
+      setVisibleRange(pendingVisibleRange);
+    }
+  }, [deferredVisibleRange, pendingVisibleRange, shouldVirtualize]);
+  
+  useEffect(() => {
+    // Ne gérer le scroll que si la virtualisation est active
+    if (!shouldVirtualize) return;
+    
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    
+    // Trouver le conteneur parent avec le scroll (.table-wrapper)
+    const findScrollContainer = (element: HTMLElement | null): HTMLElement | null => {
+      if (!element) return null;
+      if (element.classList.contains('table-wrapper')) {
+        return element;
+      }
+      return findScrollContainer(element.parentElement);
+    };
+    
+    const scrollContainer = findScrollContainer(wrapper) || wrapper;
+    scrollContainerRef.current = scrollContainer;
+    
+    let isScrolling = false;
+    let scrollTimeout: number | null = null;
+    let debounceTimeout: number | null = null;
+    let lastCalculatedRange = { start: 0, end: 100 };
+    let lastThrottleTime = 0;
+    let pendingUpdate: { start: number; end: number } | null = null;
+    
+    const handleScroll = () => {
+      if (rows.length === 0) {
+        const emptyRange = { start: 0, end: 0 };
+        setPendingVisibleRange(emptyRange);
+        lastCalculatedRange = emptyRange;
+        return;
+      }
+      
+      const rowHeight = getEffectiveRowHeight();
+      const scrollTop = scrollContainer.scrollTop || 0;
+      const containerHeight = scrollContainer.clientHeight || 600;
+      
+      const start = Math.max(0, Math.floor(scrollTop / rowHeight) - OVERSCAN);
+      const end = Math.min(
+        rows.length,
+        Math.ceil((scrollTop + containerHeight) / rowHeight) + OVERSCAN
+      );
+      
+      // Appliquer un seuil pour éviter les micro-mises à jour
+      const startDiff = Math.abs(start - lastCalculatedRange.start);
+      const endDiff = Math.abs(end - lastCalculatedRange.end);
+      
+      // Mettre à jour seulement si le changement est significatif (seuil strict)
+      if (startDiff >= SCROLL_UPDATE_THRESHOLD || endDiff >= SCROLL_UPDATE_THRESHOLD) {
+        const newRange = { start, end };
+        lastCalculatedRange = newRange;
+        pendingUpdate = newRange;
+        
+        // Debounce les mises à jour pour éviter les clignotements
+        if (debounceTimeout !== null) {
+          clearTimeout(debounceTimeout);
+        }
+        
+        debounceTimeout = window.setTimeout(() => {
+          if (pendingUpdate) {
+            // Utiliser startTransition seulement si la virtualisation est active
+            if (shouldVirtualize) {
+              startTransition(() => {
+                setPendingVisibleRange(pendingUpdate!);
+              });
+            } else {
+              setPendingVisibleRange(pendingUpdate!);
+            }
+            pendingUpdate = null;
+          }
+          debounceTimeout = null;
+        }, SCROLL_DEBOUNCE_MS);
+      }
+    };
+    
+    // Throttle + requestAnimationFrame pour optimiser les calculs de scroll
+    let rafId: number | null = null;
+    let isFirstScroll = true;
+    const optimizedHandleScroll = () => {
+      // Geler la hauteur au début du scroll si c'est la première fois
+      if (isFirstScroll) {
+        isFirstScroll = false;
+        isScrollingRef.current = true;
+        // Geler la hauteur actuelle pour éviter les changements pendant le scroll
+        if (measuredRowHeightRef.current !== null) {
+          frozenRowHeightRef.current = measuredRowHeightRef.current;
+        }
+      }
+      
+      isScrolling = true;
+      
+      // Throttle à ~60fps
+      const now = Date.now();
+      if (now - lastThrottleTime < SCROLL_THROTTLE_MS) {
+        return;
+      }
+      lastThrottleTime = now;
+      
+      if (scrollTimeout !== null) {
+        clearTimeout(scrollTimeout);
+      }
+      
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        handleScroll();
+        rafId = null;
+        
+        // Marquer la fin du scroll après un délai plus long
+        scrollTimeout = window.setTimeout(() => {
+          isScrolling = false;
+          isScrollingRef.current = false;
+          isFirstScroll = true;
+          
+          // Dégeler la hauteur après la fin du scroll
+          frozenRowHeightRef.current = null;
+          
+          // Appliquer la dernière mise à jour en attente si elle existe
+          if (pendingUpdate) {
+            if (shouldVirtualize) {
+              startTransition(() => {
+                setPendingVisibleRange(pendingUpdate!);
+              });
+            } else {
+              setPendingVisibleRange(pendingUpdate!);
+            }
+            pendingUpdate = null;
+          }
+        }, SCROLL_DEBOUNCE_MS);
+      });
+    };
+    
+    scrollContainer.addEventListener('scroll', optimizedHandleScroll, { passive: true });
+    handleScroll(); // Calculer initialement
+    
+    // Observer les changements de taille du conteneur (avec debounce)
+    let resizeTimeout: number | null = null;
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizeTimeout !== null) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = window.setTimeout(() => {
+        if (!isScrolling) {
+          handleScroll();
+        }
+      }, 100);
+    });
+    resizeObserver.observe(scrollContainer);
+    
+    return () => {
+      scrollContainer.removeEventListener('scroll', optimizedHandleScroll);
+      resizeObserver.disconnect();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      if (scrollTimeout !== null) {
+        clearTimeout(scrollTimeout);
+      }
+      if (debounceTimeout !== null) {
+        clearTimeout(debounceTimeout);
+      }
+      if (resizeTimeout !== null) {
+        clearTimeout(resizeTimeout);
+      }
+    };
+  }, [rows.length, getEffectiveRowHeight, shouldVirtualize]);
+  
+  // Calculer les lignes visibles à rendre
+  const visibleRows = useMemo(() => {
+    if (rows.length === 0) return [];
+    // Si la virtualisation est désactivée, retourner toutes les lignes directement
+    if (!shouldVirtualize) {
+      return rows;
+    }
+    const start = Math.max(0, Math.min(visibleRange.start, rows.length - 1));
+    const end = Math.min(rows.length, Math.max(start + 1, visibleRange.end));
+    return rows.slice(start, end);
+  }, [rows, visibleRange, shouldVirtualize]);
+  
+  // Calculer la hauteur totale du tableau pour maintenir le scrollbar correct (mémorisé pour éviter les recalculs)
+  // Pas nécessaire si la virtualisation est désactivée
+  const { offsetY, bottomSpacerHeight } = useMemo(() => {
+    if (!shouldVirtualize) {
+      return { offsetY: 0, bottomSpacerHeight: 0 };
+    }
+    const rowHeight = getEffectiveRowHeight();
+    const total = rows.length * rowHeight;
+    const offset = Math.max(0, Math.min(visibleRange.start, rows.length - 1)) * rowHeight;
+    const visibleHeight = visibleRows.length * rowHeight;
+    // Ajouter une marge d'erreur (buffer) pour compenser les variations de hauteur
+    const buffer = rowHeight * 0.1; // 10% de marge
+    const bottomSpacer = Math.max(0, total - offset - visibleHeight + buffer);
+    
+    return {
+      offsetY: offset,
+      bottomSpacerHeight: bottomSpacer
+    };
+  }, [rows.length, visibleRange.start, visibleRows.length, getEffectiveRowHeight, shouldVirtualize]);
 
   return (
-    <div className="csv-editor-table-wrapper">
+    <div className="csv-editor-table-wrapper" ref={wrapperRef}>
       <table id="csv-table" ref={tableRef}>
         <thead>
           <tr>
@@ -805,26 +1236,49 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
             ))}
           </tr>
         </thead>
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <TableRow
-              key={`row-${rowIndex}`}
-              row={row}
-              rowIndex={rowIndex}
-              headers={headers}
-              columnWidths={columnWidths}
-              editingCell={editingCell}
-              editingValue={editingValue}
-              categorySuggestion={categorySuggestions[rowIndex]}
-              onContextMenu={handleContextMenu}
-              onCellChange={handleCellChange}
-              onCellFocus={handleCellFocus}
-              onCellBlur={handleCellBlur}
-              onKeyDown={handleKeyDown}
-              getRowWithModifications={getRowWithModifications}
-              modifiedRowKeys={modifiedRowKeys}
-            />
-          ))}
+        <tbody ref={tbodyRef}>
+          {/* Espaceur pour les lignes au-dessus de la zone visible (seulement si virtualisation active) */}
+          {shouldVirtualize && visibleRange.start > 0 && (
+            <tr style={{ height: offsetY, visibility: 'hidden' }}>
+              <td colSpan={headers.length} style={{ padding: 0, border: 'none' }} />
+            </tr>
+          )}
+          {/* Lignes visibles */}
+          {visibleRows.map((row: EditionRow, index: number) => {
+            // Pour les petits datasets, utiliser directement l'index
+            // Pour la virtualisation, calculer l'index réel
+            const actualIndex = shouldVirtualize ? visibleRange.start + index : index;
+            const suggestion = getCategorySuggestion(actualIndex, row);
+            // Utiliser uniquement l'index réel pour la clé React (stable lors du scroll)
+            // Le composant TableRow avec memo gérera les re-renders basés sur les props
+            const stableKey = `row-${actualIndex}`;
+            
+            return (
+              <TableRow
+                key={stableKey}
+                row={row}
+                rowIndex={actualIndex}
+                headers={headers}
+                columnWidths={columnWidths}
+                editingCell={editingCell}
+                editingValue={editingValue}
+                categorySuggestion={suggestion}
+                onContextMenu={handleContextMenu}
+                onCellChange={handleCellChange}
+                onCellFocus={handleCellFocus}
+                onCellBlur={handleCellBlur}
+                onKeyDown={handleKeyDown}
+                getRowWithModifications={getRowWithModifications}
+                modifiedRowKeys={modifiedRowKeys}
+              />
+            );
+          })}
+          {/* Espaceur pour les lignes en-dessous de la zone visible (seulement si virtualisation active) */}
+          {shouldVirtualize && bottomSpacerHeight > 0 && (
+            <tr style={{ height: bottomSpacerHeight, visibility: 'hidden' }}>
+              <td colSpan={headers.length} style={{ padding: 0, border: 'none' }} />
+            </tr>
+          )}
         </tbody>
       </table>
 
