@@ -23,7 +23,7 @@ Comptal2 est une application desktop développée avec Electron et React qui per
 
 ### Windows
 
-1. Téléchargez l'installateur depuis la [section Releases](https://github.com/VOTRE_USERNAME/VOTRE_REPO/releases)
+1. Téléchargez l'installateur depuis la [section Releases](https://github.com/LeopaulV/Comptal2/releases)
 2. Exécutez `Comptal2-1.0.0-win-x64.exe`
 3. Suivez les instructions d'installation
 4. Lancez l'application depuis le menu Démarrer ou le raccourci sur le bureau
@@ -33,7 +33,17 @@ En cours de développement...
 
 ### Linux
 
-En cours de développement...
+1. Téléchargez le fichier AppImage depuis la [section Releases](https://github.com/LeopaulV/Comptal2/releases)
+2. Rendez le fichier exécutable :
+   ```bash
+   chmod +x Comptal2-1.0.0-linux-x86_64.AppImage
+   ```
+3. Lancez l'application :
+   ```bash
+   ./Comptal2-1.0.0-linux-x86_64.AppImage
+   ```
+   
+   Ou double-cliquez sur le fichier depuis votre gestionnaire de fichiers si AppImages sont pris en charge.
 
 ## Utilisation
 
@@ -71,10 +81,19 @@ L'application détecte automatiquement les colonnes de vos fichiers CSV/Excel. V
 
 ### Installation des dépendances
 
-npm install### Développement
+```bash
+npm install
+```
 
-npm run electron:dev### Build
+### Développement
 
+```bash
+npm run electron:dev
+```
+
+### Build
+
+```bash
 # Build pour Windows
 npm run build:win
 
@@ -85,4 +104,5 @@ npm run build:mac
 npm run build:linux
 
 # Build pour toutes les plateformes
-npm run build:all## Structure du projet
+npm run build:all
+```
