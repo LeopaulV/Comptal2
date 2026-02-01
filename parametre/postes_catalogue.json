@@ -1,0 +1,20 @@
+[
+  {
+    "id": "poste-1769459759649-p8bj1a",
+    "type": "materiel",
+    "designation": "Test",
+    "prixUnitaireHT": 10,
+    "quantite": 15,
+    "unite": "m2",
+    "tauxTVA": 20
+  },
+  {
+    "id": "poste-1769459788321-y5qqxm",
+    "type": "travail",
+    "designation": "Test t",
+    "tauxHoraire": 25,
+    "heuresEstimees": 8,
+    "nombreIntervenants": 1,
+    "tauxTVA": 20
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "client-1769459680662-v6ii2r",
+    "type": "particulier",
+    "adresseFacturation": {
+      "rue": "1",
+      "codePostal": "68210",
+      "ville": "Brian",
+      "pays": "France"
+    },
+    "createdAt": "2026-01-26T20:34:40.662Z",
+    "updatedAt": "2026-01-26T20:35:06.546Z",
+    "civilite": "M.",
+    "prenom": "Test",
+    "nom": "Test"
+  }
+]

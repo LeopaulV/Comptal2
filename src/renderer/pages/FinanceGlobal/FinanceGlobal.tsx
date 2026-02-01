@@ -64,9 +64,11 @@ const FinanceGlobal: React.FC = () => {
 
   // Détecter l'absence de données
   const hasNoData = categories.length === 0 && accounts.length === 0;
+  const hasNoChartData = (!monthlyCategoryData || monthlyCategoryData.months.length === 0) && 
+                         (!monthlyAccountData || monthlyAccountData.months.length === 0);
 
   // Afficher EmptyState si aucune donnée n'est disponible
-  if (hasNoData) {
+  if (hasNoData || hasNoChartData) {
     return (
       <div className="finance-global-page">
         <div className="flex items-center justify-between mb-6">
@@ -141,7 +143,7 @@ const FinanceGlobal: React.FC = () => {
 
       {/* Conteneur des graphiques */}
       <div className="finance-global-chart-container">
-        {activeChart === 'monthly' && monthlyCategoryData && (
+        {activeChart === 'monthly' && monthlyCategoryData && monthlyCategoryData.months.length > 0 && monthlyCategoryData.monthlyData.length > 0 && (
           <div className="chart active">
             <MonthlyBarChart
               months={monthlyCategoryData.months}
@@ -151,7 +153,7 @@ const FinanceGlobal: React.FC = () => {
             />
           </div>
         )}
-        {activeChart === 'balance' && monthlyAccountData && (
+        {activeChart === 'balance' && monthlyAccountData && monthlyAccountData.months.length > 0 && monthlyAccountData.monthlyData.length > 0 && (
           <div className="chart active">
             <BalanceStackedChart
               months={monthlyAccountData.months}
@@ -175,7 +177,7 @@ const FinanceGlobal: React.FC = () => {
                 <th className="fixed-column column-4">
                   {activeChart === 'monthly' ? t('financeGlobal.sum') : t('financeGlobal.currentBalance')}
                 </th>
-                {(activeChart === 'monthly' ? monthlyCategoryData?.months : monthlyAccountData?.months)?.map((month, index) => (
+                {((activeChart === 'monthly' ? monthlyCategoryData?.months : monthlyAccountData?.months) || []).map((month, index) => (
                   <th key={index}>{month}</th>
                 ))}
               </tr>
@@ -209,11 +211,12 @@ const FinanceGlobal: React.FC = () => {
                             {formatCurrency(category.totalAmount)}
                           </span>
                         </td>
-                        {monthlyCategoryData?.months.map((month, index) => {
+                        {(monthlyCategoryData?.months || []).map((month, index) => {
                           // Trouver l'index de cette catégorie dans les données
-                          const catIndex = monthlyCategoryData.categories.indexOf(category.categoryName);
-                          const value = catIndex >= 0 && monthlyCategoryData.monthlyData[catIndex] 
-                            ? monthlyCategoryData.monthlyData[catIndex][monthlyCategoryData.months.indexOf(month)] || 0
+                          const catIndex = monthlyCategoryData?.categories.indexOf(category.categoryName) ?? -1;
+                          const monthIndex = monthlyCategoryData?.months.indexOf(month) ?? -1;
+                          const value = (catIndex >= 0 && monthIndex >= 0 && monthlyCategoryData?.monthlyData[catIndex]) 
+                            ? (monthlyCategoryData.monthlyData[catIndex][monthIndex] || 0)
                             : 0;
                           
                           return (
@@ -232,18 +235,18 @@ const FinanceGlobal: React.FC = () => {
                     );
                   })}
                   {/* Ligne Total pour les catégories */}
-                  {monthlyCategoryData && (() => {
+                  {monthlyCategoryData && monthlyCategoryData.months.length > 0 && monthlyCategoryData.monthlyData.length > 0 && (() => {
                     const totalRow = {
                       categoryCode: 'Total',
                       categoryName: 'Total',
-                      avgAmount: categories.reduce((sum, cat) => {
+                      avgAmount: categories.length > 0 ? categories.reduce((sum, cat) => {
                         const avg = cat.totalAmount / (cat.transactionCount || 1);
                         return sum + avg;
-                      }, 0) / (categories.length || 1),
+                      }, 0) / categories.length : 0,
                       totalAmount: categories.reduce((sum, cat) => sum + cat.totalAmount, 0),
                       monthlyValues: monthlyCategoryData.months.map((_, monthIndex) => 
                         monthlyCategoryData.monthlyData.reduce((sum, catData) => 
-                          sum + (catData[monthIndex] || 0), 0
+                          sum + ((catData && catData[monthIndex]) || 0), 0
                         )
                       ),
                     };
@@ -315,9 +318,9 @@ const FinanceGlobal: React.FC = () => {
                             {formatCurrency(currentBalance)}
                           </span>
                         </td>
-                        {monthlyAccountData?.months.map((_, index) => {
-                          const value = accountIndex >= 0 && monthlyAccountData.monthlyData[accountIndex]
-                            ? monthlyAccountData.monthlyData[accountIndex][index] || 0
+                        {(monthlyAccountData?.months || []).map((_, index) => {
+                          const value = (accountIndex >= 0 && monthlyAccountData?.monthlyData[accountIndex] && monthlyAccountData.monthlyData[accountIndex][index] !== undefined)
+                            ? (monthlyAccountData.monthlyData[accountIndex][index] || 0)
                             : 0;
                           
                           return (
@@ -336,10 +339,10 @@ const FinanceGlobal: React.FC = () => {
                     );
                   })}
                   {/* Ligne Total pour les comptes */}
-                  {monthlyAccountData && (() => {
+                  {monthlyAccountData && monthlyAccountData.months.length > 0 && monthlyAccountData.monthlyData.length > 0 && (() => {
                     const totalMonthlyValues = monthlyAccountData.months.map((_, monthIndex) => 
                       monthlyAccountData.monthlyData.reduce((sum, accountData) => 
-                        sum + (accountData[monthIndex] || 0), 0
+                        sum + ((accountData && accountData[monthIndex]) || 0), 0
                       )
                     );
                     const totalAvgBalance = totalMonthlyValues.length > 0

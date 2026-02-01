@@ -7,4 +7,6 @@ export * from './Settings';
 export * from './Chart';
 export * from './Edition';
 export * from './AutoCategorisation';
+export * from './ProjectManagement';
+export * from './Invoice';
 

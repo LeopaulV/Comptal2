@@ -46,11 +46,6 @@ const CategoryManager: React.FC = () => {
       return;
     }
 
-    if (newCode.length !== 1) {
-      alert('Le code doit être exactement un seul caractère');
-      return;
-    }
-
     if (newCode === 'X') {
       alert('Le code "X" est réservé et ne peut pas être utilisé.');
       return;
@@ -121,11 +116,6 @@ const CategoryManager: React.FC = () => {
     
     if (!code || !newCategory.name) {
       alert('Veuillez remplir tous les champs');
-      return;
-    }
-
-    if (code.length !== 1) {
-      alert('Le code doit être exactement un seul caractère');
       return;
     }
 
@@ -223,13 +213,12 @@ const CategoryManager: React.FC = () => {
                       type="text"
                       value={editedCategory?.code || ''}
                       onChange={(e) => {
-                        const value = e.target.value.toUpperCase().slice(0, 1);
+                        const value = e.target.value.toUpperCase();
                         setEditedCategory({ ...editedCategory!, code: value });
                       }}
                       className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded
                                bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                      placeholder="Code (ex: A, B, C...)"
-                      maxLength={1}
+                      placeholder="Code (ex: A, ALIM, TRANS...)"
                     />
                     <input
                       type="text"
@@ -314,13 +303,12 @@ const CategoryManager: React.FC = () => {
                 type="text"
                 value={newCategory.code}
                 onChange={(e) => {
-                  const value = e.target.value.toUpperCase().slice(0, 1);
+                  const value = e.target.value.toUpperCase();
                   setNewCategory({ ...newCategory, code: value });
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                          bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                placeholder="Ex: A, B, C..."
-                maxLength={1}
+                placeholder="Ex: A, ALIM, TRANS..."
               />
             </div>
             <div>

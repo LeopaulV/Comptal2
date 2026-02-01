@@ -18,19 +18,11 @@ export class FileService {
   }
 
   static async writeFile(filePath: string, content: string): Promise<void> {
-    const fileSize = new Blob([content]).size;
-    console.log('[Import] Écriture fichier:', {
-      chemin: filePath,
-      taille: `${(fileSize / 1024).toFixed(2)} KB`
-    });
-    
     const result = await window.electronAPI.writeFile(filePath, content);
     if (!result.success) {
-      console.error('[Import] Erreur écriture fichier:', filePath, result.error);
+      console.error('[FileService.writeFile] Erreur:', filePath, result.error);
       throw new Error(result.error || 'Erreur lors de l\'écriture du fichier');
     }
-    
-    console.log('[Import] Fichier écrit avec succès:', filePath);
   }
 
   static async readDirectory(dirPath: string): Promise<string[]> {

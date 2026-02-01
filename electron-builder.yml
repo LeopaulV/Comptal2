@@ -26,6 +26,7 @@ win:
         - x64
   icon: build/icon.ico
   artifactName: ${productName}-${version}-win-${arch}.${ext}
+  sign: null  # Désactiver la signature (nécessite Wine si activé)
 
 nsis:
   oneClick: false
@@ -69,6 +70,16 @@ linux:
   icon: build/icon.png
   category: Office
   artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  desktop:
+    Name: Comptal2
+    Comment: Logiciel de comptabilité moderne multi-plateforme
+    Categories: Office;Finance;Accounting;
+    Keywords: comptabilité;finance;accounting;
+    StartupNotify: true
+    MimeType:
+  synopsis: Logiciel de comptabilité moderne
+  description: |
+    Comptal2 est une application desktop développée avec Electron et React qui permet de gérer efficacement vos transactions bancaires. L'application offre une interface intuitive pour importer, analyser et visualiser vos données financières avec des graphiques et des statistiques détaillées.
 
 publish: null
 

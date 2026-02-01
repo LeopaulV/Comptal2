@@ -6,6 +6,13 @@
   "dataDirectory": "./data",
   "autoSave": true,
   "showBalance": true,
-  "defaultView": "dashboard"
+  "defaultView": "dashboard",
+  "menuVisibility": {
+    "dashboard": true,
+    "upload": true,
+    "edition": true,
+    "financeGlobal": true,
+    "projectManagement": true,
+    "invoicing": true
+  }
 }
-

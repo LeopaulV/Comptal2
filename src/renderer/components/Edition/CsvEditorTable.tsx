@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, memo, useImperativeHandle, forwardRef, startTransition, useMemo, useDeferredValue } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faTrashAlt, faArrowUp, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { toast } from 'react-toastify';
 import { EditionRow } from '../../types/Edition';
 import { ConfigService } from '../../services/ConfigService';
 import { AutoCategorisationService } from '../../services/AutoCategorisationService';
@@ -19,7 +20,8 @@ interface CsvEditorTableProps {
 
 export interface CsvEditorTableRef {
   getModifiedRows: () => EditionRow[];
-  clearModifications: () => void;
+  clearModifications: (clearAll?: boolean) => void;
+  forceResetEditingState?: () => void;
 }
 
 interface ContextMenuState {
@@ -49,6 +51,8 @@ interface TableCellProps {
   isEditing: boolean;
   editingValue: string;
   categorySuggestion: string | null | undefined;
+  categories?: Record<string, { name: string; color: string }>; // Catégories disponibles pour l'autocomplétion
+  invalidCategory?: boolean; // Indique si le code de catégorie est invalide
   onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
   onCellFocus: (rowIndex: number, colIndex: number) => void;
   onCellBlur: () => void;
@@ -65,6 +69,8 @@ const TableCell = memo<TableCellProps>(({
   isEditing,
   editingValue,
   categorySuggestion,
+  categories = {},
+  invalidCategory = false,
   onCellChange,
   onCellFocus,
   onCellBlur,
@@ -73,6 +79,56 @@ const TableCell = memo<TableCellProps>(({
   const isLibelle = header === 'Libellé';
   const isCategory = header === 'catégorie';
   const hasSuggestion = isCategory && categorySuggestion && (!displayValue || displayValue.trim() === '' || displayValue === '???');
+  
+  // État pour l'autocomplétion
+  const [autocompleteOpen, setAutocompleteOpen] = useState(false);
+  const [filteredCategories, setFilteredCategories] = useState<Array<{ code: string; name: string }>>([]);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+  
+  // Filtrer les catégories en fonction de la saisie
+  useEffect(() => {
+    if (isCategory && isEditing && editingValue) {
+      const searchTerm = editingValue.trim().toUpperCase();
+      const filtered = Object.entries(categories)
+        .filter(([code, cat]) => {
+          const codeMatch = code.toUpperCase().includes(searchTerm);
+          const nameMatch = cat.name.toUpperCase().includes(searchTerm);
+          return codeMatch || nameMatch;
+        })
+        .slice(0, 10) // Limiter à 10 suggestions
+        .map(([code, cat]) => ({ code, name: cat.name }));
+      
+      setFilteredCategories(filtered);
+      setAutocompleteOpen(filtered.length > 0 && searchTerm.length > 0);
+      setSelectedIndex(-1);
+    } else {
+      setAutocompleteOpen(false);
+      setFilteredCategories([]);
+    }
+  }, [isCategory, isEditing, editingValue, categories]);
+  
+  // Fermer l'autocomplétion lors du clic en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        autocompleteRef.current &&
+        !autocompleteRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setAutocompleteOpen(false);
+      }
+    };
+    
+    if (autocompleteOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [autocompleteOpen]);
 
   if (isLibelle) {
     return (
@@ -92,30 +148,159 @@ const TableCell = memo<TableCellProps>(({
     );
   }
 
+  const handleCategoryKeyDown = (e: React.KeyboardEvent) => {
+    if (!autocompleteOpen || filteredCategories.length === 0) {
+      onKeyDown(e, rowIndex, colIndex);
+      return;
+    }
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => (prev < filteredCategories.length - 1 ? prev + 1 : prev));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
+        break;
+      case 'Enter':
+        if (selectedIndex >= 0 && selectedIndex < filteredCategories.length) {
+          e.preventDefault();
+          onCellChange(rowIndex, colIndex, filteredCategories[selectedIndex].code);
+          setAutocompleteOpen(false);
+        } else {
+          onKeyDown(e, rowIndex, colIndex);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setAutocompleteOpen(false);
+        break;
+      default:
+        onKeyDown(e, rowIndex, colIndex);
+    }
+  };
+  
+  const handleCategoryChange = (value: string) => {
+    onCellChange(rowIndex, colIndex, value);
+  };
+  
+  const handleCategoryFocus = () => {
+    onCellFocus(rowIndex, colIndex);
+    if (isEditing && editingValue) {
+      const searchTerm = editingValue.trim().toUpperCase();
+      if (searchTerm.length > 0) {
+        const filtered = Object.entries(categories)
+          .filter(([code, cat]) => {
+            const codeMatch = code.toUpperCase().includes(searchTerm);
+            const nameMatch = cat.name.toUpperCase().includes(searchTerm);
+            return codeMatch || nameMatch;
+          })
+          .slice(0, 10)
+          .map(([code, cat]) => ({ code, name: cat.name }));
+        setFilteredCategories(filtered);
+        setAutocompleteOpen(filtered.length > 0);
+      }
+    }
+  };
+  
+  const handleCategoryBlur = () => {
+    // Délai pour permettre le clic sur une suggestion
+    setTimeout(() => {
+      setAutocompleteOpen(false);
+      onCellBlur();
+    }, 200);
+  };
+  
+  const selectCategory = (code: string) => {
+    onCellChange(rowIndex, colIndex, code);
+    setAutocompleteOpen(false);
+    inputRef.current?.blur();
+  };
+
   return (
     <td style={{ width: columnWidth || 'auto' }}>
       <div style={{ position: 'relative' }}>
         <input
+          ref={inputRef}
           type="text"
           value={isEditing ? editingValue : displayValue}
-          onChange={(e) => onCellChange(rowIndex, colIndex, e.target.value)}
-          onFocus={() => onCellFocus(rowIndex, colIndex)}
-          onBlur={onCellBlur}
-          onKeyDown={(e) => onKeyDown(e, rowIndex, colIndex)}
+          onChange={(e) => isCategory ? handleCategoryChange(e.target.value) : onCellChange(rowIndex, colIndex, e.target.value)}
+          onFocus={() => isCategory ? handleCategoryFocus() : onCellFocus(rowIndex, colIndex)}
+          onBlur={isCategory ? handleCategoryBlur : onCellBlur}
+          onKeyDown={(e) => isCategory ? handleCategoryKeyDown(e) : onKeyDown(e, rowIndex, colIndex)}
           className="form-control form-control-sm"
           style={{
             textAlign: header === 'Débit' || header === 'Crédit' || header === 'Solde' ? 'right' : 'left',
             ...(isCategory && displayValue === 'X' ? { backgroundColor: '#fee2e2', cursor: 'not-allowed' } : {}),
+            ...(isCategory && invalidCategory && isEditing ? { borderColor: '#ef4444', borderWidth: '2px' } : {}),
           }}
           disabled={isCategory && displayValue === 'X'}
           placeholder={hasSuggestion ? `Suggéré: ${categorySuggestion}` : undefined}
-          maxLength={isCategory ? 1 : undefined}
         />
         {hasSuggestion && !isEditing && (
           <span className="suggestion-badge">
             <span>💡</span>
             <span>{categorySuggestion}</span>
           </span>
+        )}
+        {isCategory && invalidCategory && isEditing && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: '2px',
+            padding: '4px 8px',
+            backgroundColor: '#fee2e2',
+            color: '#991b1b',
+            fontSize: '11px',
+            borderRadius: '4px',
+            whiteSpace: 'nowrap',
+            zIndex: 1000,
+            border: '1px solid #fecaca'
+          }}>
+            ⚠️ Cette catégorie n'existe pas
+          </div>
+        )}
+        {isCategory && autocompleteOpen && filteredCategories.length > 0 && (
+          <div
+            ref={autocompleteRef}
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              marginTop: '2px',
+              backgroundColor: 'white',
+              border: '1px solid #d1d5db',
+              borderRadius: '4px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              zIndex: 1000,
+            }}
+          >
+            {filteredCategories.map((cat, index) => (
+              <div
+                key={cat.code}
+                onClick={() => selectCategory(cat.code)}
+                onMouseEnter={() => setSelectedIndex(index)}
+                style={{
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  backgroundColor: index === selectedIndex ? '#f3f4f6' : 'white',
+                  borderBottom: index < filteredCategories.length - 1 ? '1px solid #e5e7eb' : 'none',
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: '13px', color: '#111827' }}>
+                  {cat.code}
+                </div>
+                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                  {cat.name}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </td>
@@ -130,7 +315,10 @@ const TableCell = memo<TableCellProps>(({
     prevProps.isEditing === nextProps.isEditing &&
     prevProps.editingValue === nextProps.editingValue &&
     prevProps.categorySuggestion === nextProps.categorySuggestion &&
-    prevProps.header === nextProps.header
+    prevProps.header === nextProps.header &&
+    prevProps.invalidCategory === nextProps.invalidCategory &&
+    // Comparer les catégories par référence (elles ne changent que lors du chargement)
+    prevProps.categories === nextProps.categories
   );
 });
 
@@ -145,6 +333,8 @@ interface TableRowProps {
   editingCell: { rowIndex: number; colIndex: number } | null;
   editingValue: string;
   categorySuggestion: string | null | undefined;
+  categories?: Record<string, { name: string; color: string }>;
+  invalidCategoryCells?: Set<string>;
   onContextMenu: (event: React.MouseEvent, rowIndex: number) => void;
   onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
   onCellFocus: (rowIndex: number, colIndex: number) => void;
@@ -152,6 +342,7 @@ interface TableRowProps {
   onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number) => void;
   getRowWithModifications: (row: EditionRow) => EditionRow;
   modifiedRowKeys: Set<string>;
+  renderKey?: number; // Clé pour forcer le re-render sans démonter les composants
 }
 
 // Composant TableRow mémorisé
@@ -163,6 +354,8 @@ const TableRow = memo<TableRowProps>(({
   editingCell,
   editingValue,
   categorySuggestion,
+  categories = {},
+  invalidCategoryCells = new Set(),
   onContextMenu,
   onCellChange,
   onCellFocus,
@@ -170,6 +363,7 @@ const TableRow = memo<TableRowProps>(({
   onKeyDown,
   getRowWithModifications,
   modifiedRowKeys,
+  renderKey: _renderKey = 0,
 }) => {
   const isEditingRow = editingCell?.rowIndex === rowIndex;
   // Utiliser la ligne avec modifications appliquées
@@ -187,9 +381,12 @@ const TableRow = memo<TableRowProps>(({
         const displayValue = formatCellValue(value, header);
         const isEditing = isEditingRow && editingCell?.colIndex === colIndex;
 
+        const cellKey = `${rowIndex}-${colIndex}`;
+        const isInvalidCategory = header === 'catégorie' && invalidCategoryCells.has(cellKey);
+
         return (
           <TableCell
-            key={`${rowIndex}-${colIndex}`}
+            key={cellKey}
             rowIndex={rowIndex}
             colIndex={colIndex}
             header={header}
@@ -198,6 +395,8 @@ const TableRow = memo<TableRowProps>(({
             isEditing={isEditing}
             editingValue={editingValue}
             categorySuggestion={categorySuggestion}
+            categories={categories}
+            invalidCategory={isInvalidCategory}
             onCellChange={onCellChange}
             onCellFocus={onCellFocus}
             onCellBlur={onCellBlur}
@@ -219,10 +418,13 @@ const TableRow = memo<TableRowProps>(({
   
   if (prevIsModified !== nextIsModified) return false;
   
-  // Comparer l'état d'édition
+  // Comparer l'état d'édition - détecter explicitement le changement vers null
   const prevIsEditing = prevProps.editingCell?.rowIndex === prevProps.rowIndex;
   const nextIsEditing = nextProps.editingCell?.rowIndex === nextProps.rowIndex;
   if (prevIsEditing !== nextIsEditing) return false;
+  
+  // Vérifier explicitement si editingCell est passé de quelque chose à null (ou vice versa)
+  if ((prevProps.editingCell === null) !== (nextProps.editingCell === null)) return false;
   
   // Si on édite cette ligne, vérifier les valeurs d'édition
   if (prevIsEditing && nextIsEditing) {
@@ -232,6 +434,15 @@ const TableRow = memo<TableRowProps>(({
   
   // Comparer la suggestion de catégorie
   if (prevProps.categorySuggestion !== nextProps.categorySuggestion) return false;
+  
+  // Comparer les catégories (par référence)
+  if (prevProps.categories !== nextProps.categories) return false;
+  
+  // Comparer les cellules invalides (vérifier si le Set a changé pour cette ligne)
+  // Utiliser prevRowKey et nextRowKey déjà déclarés plus haut
+  const prevHasInvalid = Array.from(prevProps.invalidCategoryCells || []).some(key => key.startsWith(`${prevProps.rowIndex}-`));
+  const nextHasInvalid = Array.from(nextProps.invalidCategoryCells || []).some(key => key.startsWith(`${nextProps.rowIndex}-`));
+  if (prevHasInvalid !== nextHasInvalid) return false;
   
   // Comparer les références des objets (si la ligne n'a pas changé, la référence devrait être la même)
   if (prevProps.row !== nextProps.row) {
@@ -252,6 +463,9 @@ const TableRow = memo<TableRowProps>(({
   // Comparer les références des tableaux
   if (prevProps.headers !== nextProps.headers) return false;
   if (prevProps.columnWidths !== nextProps.columnWidths) return false;
+  
+  // Comparer renderKey pour forcer le re-render après sauvegarde
+  if (prevProps.renderKey !== nextProps.renderKey) return false;
   
   return true;
 });
@@ -278,7 +492,16 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
   const tableRef = useRef<HTMLTableElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const blurTimeoutRef = useRef<number | null>(null);
+  // Refs pour accéder aux valeurs actuelles dans clearModifications
+  const editingCellRef = useRef<{ rowIndex: number; colIndex: number } | null>(null);
+  const editingValueRef = useRef<string>('');
+  const applyCellChangeRef = useRef<((rowIndex: number, colIndex: number, value: string) => boolean) | null>(null);
+  const categoriesRef = useRef<Record<string, { name: string; color: string }>>({});
   const [bankAccounts, setBankAccounts] = useState<Record<string, any>>({});
+  const [categories, setCategories] = useState<Record<string, { name: string; color: string }>>({});
+  const [invalidCategoryCells, setInvalidCategoryCells] = useState<Set<string>>(new Set()); // Format: "rowIndex-colIndex"
+  const [renderKey, setRenderKey] = useState(0); // Clé pour forcer le re-render après sauvegarde
 
   // Charger les comptes bancaires pour la validation
   useEffect(() => {
@@ -292,6 +515,25 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     };
     loadAccounts();
   }, []);
+
+  // Charger les catégories pour l'autocomplétion
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await ConfigService.loadCategories();
+        setCategories(cats);
+        categoriesRef.current = cats;
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error);
+      }
+    };
+    loadCategories();
+  }, []);
+  
+  // Mettre à jour la ref des catégories quand elles changent
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
 
   /**
    * Extrait le préfixe du compte depuis le nom de fichier Source
@@ -331,6 +573,16 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       };
     }
   }, [contextMenu]);
+
+  // Nettoyer le timeout de blur lors du démontage
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current !== null) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Gestion du redimensionnement des colonnes
   useEffect(() => {
@@ -413,11 +665,35 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     return row;
   }, [getRowKey]);
 
-  // Mettre à jour les refs quand les props changent
+  // Ref pour suivre la longueur précédente des lignes pour détecter les rechargements
+  const editingStateResetRef = useRef<number>(rows.length);
+  
+  // Mettre à jour les refs quand les props changent et réinitialiser l'état d'édition
   useEffect(() => {
     rowsRef.current = rows;
     // Vider le cache des suggestions quand les lignes changent
     suggestionsCacheRef.current.clear();
+    
+    // Réinitialiser l'état d'édition si le nombre de lignes change significativement (rechargement)
+    const currentLength = rows.length;
+    const previousLength = editingStateResetRef.current;
+    
+    // Si le nombre de lignes change de manière significative (plus de 10%), c'est probablement un rechargement
+    if (previousLength > 0 && Math.abs(currentLength - previousLength) > Math.max(10, previousLength * 0.1)) {
+      // Annuler le timeout de blur s'il est actif
+      if (blurTimeoutRef.current !== null) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      
+      // Réinitialiser l'état d'édition pour éviter les blocages après rechargement
+      setEditingCell(null);
+      editingCellRef.current = null;
+      setEditingValue('');
+      editingValueRef.current = '';
+    }
+    
+    editingStateResetRef.current = currentLength;
   }, [rows]);
   
   useEffect(() => {
@@ -441,9 +717,144 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       });
       return modifiedRows;
     },
-    clearModifications: () => {
-      localModificationsRef.current.clear();
-      setModifiedRowKeys(new Set());
+    forceResetEditingState: () => {
+      console.log('[CsvEditorTable] forceResetEditingState appelé - réinitialisation complète');
+      // Nettoyer TOUS les timeouts actifs
+      if (blurTimeoutRef.current !== null) {
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      
+      // Forcer le blur de tous les inputs actifs
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement)) {
+        activeEl.blur();
+      }
+      
+      // Réinitialiser l'état dans une transition pour forcer le re-render
+      startTransition(() => {
+        setEditingCell(null);
+        editingCellRef.current = null;
+        setEditingValue('');
+        editingValueRef.current = '';
+        // Incrémenter renderKey pour forcer le re-render de tous les composants
+        setRenderKey(prev => prev + 1);
+      });
+    },
+    clearModifications: (clearAll: boolean = false) => {
+      console.log('[CsvEditorTable] clearModifications appelé, clearAll:', clearAll);
+      
+      // IMPORTANT: Appliquer les modifications en cours AVANT de forcer le blur
+      // Vérifier d'abord via les refs, puis via l'élément actif dans le DOM
+      let currentEditingCell = editingCellRef.current;
+      let currentEditingValue = editingValueRef.current;
+      
+      // Si les refs sont null, vérifier l'élément actif dans le DOM
+      const activeElement = document.activeElement;
+      if ((!currentEditingCell || !currentEditingValue) && activeElement && activeElement instanceof HTMLInputElement) {
+        console.log('[CsvEditorTable] Tentative de récupération depuis l\'élément actif du DOM');
+        // Trouver la cellule parente (td)
+        const td = activeElement.closest('td');
+        if (td && tableRef.current) {
+          // Trouver la ligne parente (tr)
+          const tr = td.closest('tr');
+          if (tr && tr.parentElement) {
+            // Calculer rowIndex et colIndex depuis le DOM
+            const tbody = tr.parentElement;
+            const rowIndex = Array.from(tbody.children).indexOf(tr);
+            const colIndex = Array.from(tr.children).indexOf(td);
+            
+            if (rowIndex >= 0 && colIndex >= 0) {
+              console.log(`[CsvEditorTable] Cellule trouvée dans le DOM: row=${rowIndex}, col=${colIndex}`);
+              currentEditingCell = { rowIndex, colIndex };
+              currentEditingValue = activeElement.value;
+            }
+          }
+        }
+      }
+      
+      if (currentEditingCell && currentEditingValue !== undefined) {
+        console.log('[CsvEditorTable] Cellule en cours d\'édition détectée, application de la modification', currentEditingCell);
+        const header = headersRef.current[currentEditingCell.colIndex];
+        
+        // Validation de la catégorie (comme dans handleCellBlur)
+        if (header === 'catégorie') {
+          const normalizedValue = currentEditingValue.trim().toUpperCase();
+          const cellKey = `${currentEditingCell.rowIndex}-${currentEditingCell.colIndex}`;
+          
+          if (normalizedValue && normalizedValue !== 'X' && normalizedValue !== '???' && normalizedValue !== '') {
+            if (!categoriesRef.current[normalizedValue]) {
+              setInvalidCategoryCells(prev => {
+                const newSet = new Set(prev);
+                newSet.add(cellKey);
+                return newSet;
+              });
+            } else {
+              setInvalidCategoryCells(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(cellKey);
+                return newSet;
+              });
+            }
+          } else {
+            setInvalidCategoryCells(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(cellKey);
+              return newSet;
+            });
+          }
+        }
+        
+        // Appliquer la modification
+        if (applyCellChangeRef.current) {
+          applyCellChangeRef.current(currentEditingCell.rowIndex, currentEditingCell.colIndex, currentEditingValue);
+          console.log('[CsvEditorTable] Modification appliquée pour la cellule en cours d\'édition');
+        }
+      } else {
+        console.log('[CsvEditorTable] Aucune cellule en cours d\'édition détectée');
+      }
+      
+      // Effacer les modifications seulement si clearAll est true (par exemple après chargement des données)
+      if (clearAll) {
+        console.log('[CsvEditorTable] Effacement de toutes les modifications');
+        localModificationsRef.current.clear();
+        setModifiedRowKeys(new Set());
+      } else {
+        console.log('[CsvEditorTable] Conservation des modifications pour la sauvegarde');
+      }
+      
+      // Réinitialiser aussi l'état d'édition pour éviter les blocages
+      // IMPORTANT: Nettoyer le timeout AVANT de réinitialiser l'état d'édition
+      if (blurTimeoutRef.current !== null) {
+        console.log('[CsvEditorTable] Nettoyage du blurTimeoutRef');
+        clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      
+      // Réinitialiser immédiatement l'état d'édition (sans délai)
+      setEditingCell(null);
+      editingCellRef.current = null;
+      setEditingValue('');
+      editingValueRef.current = '';
+      
+      // Maintenant forcer le blur de tous les inputs actifs APRÈS avoir appliqué les modifications
+      // et réinitialisé l'état, pour éviter que les inputs restent bloqués
+      // IMPORTANT: Ne pas forcer le focus sur le body car cela peut bloquer les interactions futures
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement)) {
+        console.log('[CsvEditorTable] Forçage du blur sur l\'élément actif après réinitialisation');
+        // Forcer le blur immédiatement
+        activeEl.blur();
+        // Utiliser setTimeout pour s'assurer que le blur est bien traité, mais ne pas forcer le focus sur body
+        // Cela permet aux inputs de recevoir le focus normalement après la sauvegarde
+        setTimeout(() => {
+          if (document.activeElement === activeEl) {
+            activeEl.blur();
+          }
+        }, 0);
+      }
+      
+      console.log('[CsvEditorTable] État d\'édition réinitialisé');
     },
   }), []);
 
@@ -451,13 +862,15 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   const handleCellChange = useCallback((_rowIndex: number, colIndex: number, value: string) => {
     const header = headersRef.current[colIndex];
     
-    // Pour la colonne catégorie, limiter à 1 caractère et transformer en majuscule
+    // Pour la colonne catégorie, transformer en majuscule mais ne pas limiter pendant l'édition
+    // La limitation à 1 caractère sera faite lors de l'application (applyCellChange)
     if (header === 'catégorie') {
-      value = value.toUpperCase().slice(0, 1);
+      value = value.toUpperCase();
     }
     
     // Mettre à jour uniquement la valeur temporaire
     setEditingValue(value);
+    editingValueRef.current = value;
   }, []);
 
   // Fonction pour appliquer le changement après validation (stockage local uniquement)
@@ -468,18 +881,13 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     
     // VALIDATION : Empêcher la modification de la catégorie "X"
     if (header === 'catégorie' && originalRow.catégorie === 'X') {
-      alert('La catégorie "X" ne peut pas être modifiée.');
+      toast.warning('La catégorie "X" ne peut pas être modifiée.');
       return false;
     }
     
-    // VALIDATION : Pour la colonne catégorie, vérifier qu'il n'y a qu'un seul caractère
+    // VALIDATION : Pour la colonne catégorie, normaliser en majuscules
     if (header === 'catégorie') {
-      const normalizedValue = value.trim().toUpperCase();
-      if (normalizedValue.length > 1) {
-        alert('Le code de catégorie doit être exactement un seul caractère');
-        return false;
-      }
-      value = normalizedValue;
+      value = value.trim().toUpperCase();
     }
     
     // VALIDATION : Empêcher la modification incohérente du champ Compte
@@ -525,6 +933,21 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     const existingModifiedRow = localModificationsRef.current.get(rowKey);
     const baseRow = existingModifiedRow || originalRow;
     
+    // Vérifier si la valeur a réellement changé
+    const currentValue = baseRow[header as keyof EditionRow];
+    let stringValue = String(currentValue || '').trim();
+    // Normaliser "???" comme valeur vide pour la comparaison
+    if (stringValue === '???' || stringValue === '') {
+      stringValue = '';
+    }
+    const newValue = value.trim();
+    
+    // Si la valeur n'a pas changé, ne pas créer de modification
+    // Mais toujours créer une modification si on passe de "???" à une valeur vide (pour forcer la mise à jour)
+    if (stringValue === newValue && !(String(currentValue || '') === '???' && newValue === '')) {
+      return true;
+    }
+    
     // Créer la ligne modifiée
     let modifiedRow: EditionRow;
     
@@ -551,9 +974,10 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
         };
       }
     } else {
+      // Pour les champs texte, stocker la valeur même si elle est vide (pour permettre la suppression)
       modifiedRow = {
         ...baseRow,
-        [header]: value,
+        [header]: newValue,
         modified: true,
       };
     }
@@ -573,28 +997,88 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     // NE PLUS appeler onRowsChange - les modifications seront appliquées à la sauvegarde
     return true;
   }, [getRowKey]);
+  
+  // Mettre à jour la ref de applyCellChange
+  useEffect(() => {
+    applyCellChangeRef.current = applyCellChange;
+  }, [applyCellChange]);
 
   const handleCellFocus = useCallback((rowIndex: number, colIndex: number) => {
+    // Annuler le timeout de blur s'il existe pour éviter les conflits
+    if (blurTimeoutRef.current !== null) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    
     const header = headersRef.current[colIndex];
     const originalRow = rowsRef.current[rowIndex];
     const rowWithModifications = getRowWithModifications(originalRow);
     const currentValue = rowWithModifications[header as keyof EditionRow];
     const displayValue = formatCellValue(currentValue, header);
-    setEditingCell({ rowIndex, colIndex });
-    setEditingValue(String(displayValue));
+    const editingCellValue = { rowIndex, colIndex };
+    setEditingCell(editingCellValue);
+    editingCellRef.current = editingCellValue;
+    const editingValueStr = String(displayValue);
+    setEditingValue(editingValueStr);
+    editingValueRef.current = editingValueStr;
   }, [getRowWithModifications]);
 
   const handleCellBlur = useCallback(() => {
+    // Annuler le timeout précédent s'il existe
+    if (blurTimeoutRef.current !== null) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    
     // Appliquer le changement avant de fermer l'édition
     if (editingCell) {
+      const header = headersRef.current[editingCell.colIndex];
+      
+      // Validation de la catégorie
+      if (header === 'catégorie') {
+        const normalizedValue = editingValue.trim().toUpperCase();
+        const cellKey = `${editingCell.rowIndex}-${editingCell.colIndex}`;
+        
+        // Vérifier si le code existe (sauf si vide ou "X")
+        if (normalizedValue && normalizedValue !== 'X' && normalizedValue !== '???' && normalizedValue !== '') {
+          if (!categories[normalizedValue]) {
+            // Code invalide - marquer la cellule
+            setInvalidCategoryCells(prev => {
+              const newSet = new Set(prev);
+              newSet.add(cellKey);
+              return newSet;
+            });
+          } else {
+            // Code valide - retirer de la liste des invalides
+            setInvalidCategoryCells(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(cellKey);
+              return newSet;
+            });
+          }
+        } else {
+          // Valeur vide ou spéciale - retirer de la liste des invalides
+          setInvalidCategoryCells(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(cellKey);
+            return newSet;
+          });
+        }
+      }
+      
       applyCellChange(editingCell.rowIndex, editingCell.colIndex, editingValue);
     }
-    // Délai pour permettre les clics sur le menu contextuel
-    setTimeout(() => {
+    
+    // Réinitialiser immédiatement l'état d'édition pour éviter les problèmes de synchronisation
+    // Utiliser un délai minimal uniquement pour permettre les clics sur le menu contextuel
+    blurTimeoutRef.current = window.setTimeout(() => {
       setEditingCell(null);
+      editingCellRef.current = null;
       setEditingValue('');
-    }, 200);
-  }, [editingCell, editingValue, applyCellChange]);
+      editingValueRef.current = '';
+      blurTimeoutRef.current = null;
+    }, 100);
+  }, [editingCell, editingValue, applyCellChange, categories]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
     const totalRows = rowsRef.current.length;
@@ -1251,6 +1735,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
             const suggestion = getCategorySuggestion(actualIndex, row);
             // Utiliser uniquement l'index réel pour la clé React (stable lors du scroll)
             // Le composant TableRow avec memo gérera les re-renders basés sur les props
+            // renderKey sera passé comme prop pour forcer le re-render sans démonter les composants
             const stableKey = `row-${actualIndex}`;
             
             return (
@@ -1263,6 +1748,8 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
                 editingCell={editingCell}
                 editingValue={editingValue}
                 categorySuggestion={suggestion}
+                categories={categories}
+                invalidCategoryCells={invalidCategoryCells}
                 onContextMenu={handleContextMenu}
                 onCellChange={handleCellChange}
                 onCellFocus={handleCellFocus}
@@ -1270,6 +1757,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
                 onKeyDown={handleKeyDown}
                 getRowWithModifications={getRowWithModifications}
                 modifiedRowKeys={modifiedRowKeys}
+                renderKey={renderKey}
               />
             );
           })}

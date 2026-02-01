@@ -17,6 +17,26 @@ const AccountManager: React.FC = () => {
   const [showPaletteModal, setShowPaletteModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Fonction de validation du code de compte : uniquement lettres et chiffres, pas de caractères spéciaux ni underscores
+  const validateAccountCode = (code: string): { valid: boolean; message?: string } => {
+    if (!code) {
+      return { valid: false, message: 'Le code ne peut pas être vide' };
+    }
+    
+    // Vérifier que le code ne contient que des lettres (A-Z, a-z) et des chiffres (0-9)
+    // Pas de caractères spéciaux, pas d'underscores, pas d'espaces
+    const validPattern = /^[A-Za-z0-9]+$/;
+    
+    if (!validPattern.test(code)) {
+      return { 
+        valid: false, 
+        message: 'Le code ne peut contenir que des lettres (A-Z) et des chiffres (0-9). Les caractères spéciaux et les underscores sont interdits.' 
+      };
+    }
+    
+    return { valid: true };
+  };
+
   useEffect(() => {
     loadAccounts();
   }, []);
@@ -36,9 +56,10 @@ const AccountManager: React.FC = () => {
 
     const newCode = editedAccount.code.trim().toUpperCase();
     
-    // Validation
-    if (!newCode) {
-      alert('Le code ne peut pas être vide');
+    // Validation du format du code
+    const validation = validateAccountCode(newCode);
+    if (!validation.valid) {
+      alert(validation.message);
       return;
     }
 
@@ -105,14 +126,23 @@ const AccountManager: React.FC = () => {
       return;
     }
 
-    if (accounts[newAccount.code]) {
+    const code = newAccount.code.trim().toUpperCase();
+    
+    // Validation du format du code
+    const validation = validateAccountCode(code);
+    if (!validation.valid) {
+      alert(validation.message);
+      return;
+    }
+
+    if (accounts[code]) {
       alert('Ce code de compte existe déjà');
       return;
     }
 
     const updated = {
       ...accounts,
-      [newAccount.code]: {
+      [code]: {
         name: newAccount.name,
         color: newAccount.color,
       },
@@ -194,7 +224,11 @@ const AccountManager: React.FC = () => {
                     <input
                       type="text"
                       value={editedAccount?.code || ''}
-                      onChange={(e) => setEditedAccount({ ...editedAccount!, code: e.target.value.toUpperCase() })}
+                      onChange={(e) => {
+                        // Filtrer les caractères invalides en temps réel
+                        const filtered = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                        setEditedAccount({ ...editedAccount!, code: filtered });
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                       placeholder="Code (ex: CCAL, N26...)"
@@ -273,7 +307,11 @@ const AccountManager: React.FC = () => {
               <input
                 type="text"
                 value={newAccount.code}
-                onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value.toUpperCase() })}
+                onChange={(e) => {
+                  // Filtrer les caractères invalides en temps réel
+                  const filtered = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                  setNewAccount({ ...newAccount, code: filtered });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                          bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                 placeholder="Ex: BNP, HSBC..."
@@ -317,7 +355,12 @@ const AccountManager: React.FC = () => {
           </div>
         </div>
       ) : (
-        <Button variant="secondary" icon={<Plus size={18} />} onClick={() => setIsAdding(true)}>
+        <Button 
+          variant="secondary" 
+          icon={<Plus size={18} />} 
+          onClick={() => setIsAdding(true)}
+          data-tour-step="create-account"
+        >
           Ajouter un compte
         </Button>
       )}

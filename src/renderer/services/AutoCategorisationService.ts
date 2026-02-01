@@ -1,6 +1,6 @@
 // Service pour l'auto-catégorisation basée sur des statistiques par mot
 
-import { WordStats, WordStatsMap, CategorySuggestion } from '../types/AutoCategorisation';
+import { WordStatsMap, CategorySuggestion } from '../types/AutoCategorisation';
 
 // Constantes de configuration
 const MIN_WORD_LENGTH = 2;

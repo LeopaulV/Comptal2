@@ -258,3 +258,60 @@ function hslToHex(h: number, s: number, l: number): string {
   }).join('')}`;
 }
 
+/**
+ * Convertit une couleur hexadécimale en HSL
+ */
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const cleanHex = hex.replace('#', '');
+  const r = parseInt(cleanHex.substr(0, 2), 16) / 255;
+  const g = parseInt(cleanHex.substr(2, 2), 16) / 255;
+  const b = parseInt(cleanHex.substr(4, 2), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (delta !== 0) {
+    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    if (max === r) {
+      h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+    } else if (max === g) {
+      h = ((b - r) / delta + 2) / 6;
+    } else {
+      h = ((r - g) / delta + 4) / 6;
+    }
+  }
+
+  return { h, s, l };
+}
+
+/**
+ * Éclaircit une couleur hexadécimale en augmentant sa luminosité
+ * @param hex - Couleur hexadécimale (ex: "#ff0000")
+ * @param amount - Pourcentage d'éclaircissement (0-1, ex: 0.2 pour 20%)
+ * @returns Couleur hexadécimale éclaircie
+ */
+export function lightenColor(hex: string, amount: number): string {
+  const { h, s, l } = hexToHsl(hex);
+  // Augmenter la luminosité, mais ne pas dépasser 0.95 pour garder la couleur visible
+  const newL = Math.min(0.95, l + amount);
+  return hslToHex(h, s, newL);
+}
+
+/**
+ * Assombrit une couleur hexadécimale en diminuant sa luminosité
+ * @param hex - Couleur hexadécimale (ex: "#ff0000")
+ * @param amount - Pourcentage d'assombrissement (0-1, ex: 0.2 pour 20%)
+ * @returns Couleur hexadécimale assombrie
+ */
+export function darkenColor(hex: string, amount: number): string {
+  const { h, s, l } = hexToHsl(hex);
+  // Diminuer la luminosité, mais ne pas descendre en dessous de 0.05 pour garder la couleur visible
+  const newL = Math.max(0.05, l - amount);
+  return hslToHex(h, s, newL);
+}
+

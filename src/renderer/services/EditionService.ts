@@ -118,18 +118,23 @@ export class EditionService {
       // Charger les comptes bancaires pour filtrer les sources
       const bankAccounts = await ConfigService.loadAccounts();
       
-      // Lire tous les fichiers CSV du dossier data
+      // Charger le chemin du dossier de données depuis les settings
+      const settings = await ConfigService.loadSettings();
+      const dataDirectory = settings.dataDirectory || 'data';
+      
+      // Lire tous les fichiers CSV du dossier de données
       let files: string[] = [];
       try {
-        files = await FileService.readDirectory('data');
+        files = await FileService.readDirectory(dataDirectory);
       } catch (error: any) {
         // Si le dossier n'existe pas ou est vide, retourner une structure vide
         const errorMessage = error.message || String(error);
         if (errorMessage.includes('non trouvé') || errorMessage.includes('n\'existe pas') || errorMessage.includes('does not exist')) {
-          console.warn('[EditionService] Le dossier data/ n\'existe pas ou est vide. Retour d\'une structure vide.');
+          console.warn(`[EditionService] Le dossier ${dataDirectory} n'existe pas ou est vide. Retour d'une structure vide.`);
           return {
             headers: this.REQUIRED_COLUMNS,
             rows: [],
+            ignoredFiles: undefined,
           };
         }
         // Pour les autres erreurs, relancer
@@ -140,16 +145,18 @@ export class EditionService {
 
       // Si aucun fichier CSV n'est trouvé, retourner une structure vide
       if (csvFiles.length === 0) {
-        console.warn('[EditionService] Aucun fichier CSV trouvé dans le dossier data/. Retour d\'une structure vide.');
+        console.warn(`[EditionService] Aucun fichier CSV trouvé dans le dossier ${dataDirectory}. Retour d'une structure vide.`);
         return {
           headers: this.REQUIRED_COLUMNS,
           rows: [],
+          ignoredFiles: undefined,
         };
       }
 
       const allRows: EditionRow[] = [];
       const fileMapping: Record<string, string> = {};
       let detectedHeaders: string[] = []; // Headers détectés dynamiquement
+      const ignoredFiles: Array<{ fileName: string; accountCode: string }> = []; // Fichiers ignorés
 
       // Créer un mapping nom complet -> nom complet (identité)
       // Cela évite les collisions quand plusieurs fichiers ont la même période de dates
@@ -160,7 +167,7 @@ export class EditionService {
       // Charger et parser chaque fichier CSV
       for (const fileName of csvFiles) {
         try {
-          const filePath = `data/${fileName}`;
+          const filePath = `${dataDirectory}/${fileName}`;
           const content = await FileService.readFile(filePath);
 
           // Extraire le préfixe du compte depuis le nom de fichier (comme Comptal1)
@@ -169,6 +176,7 @@ export class EditionService {
           // Vérifier que le compte existe dans les comptes bancaires connus
           if (!(accountPrefix in bankAccounts)) {
             console.warn(`[EditionService] Compte ${accountPrefix} non trouvé dans les comptes valides, fichier ${fileName} ignoré`);
+            ignoredFiles.push({ fileName, accountCode: accountPrefix });
             continue;
           }
 
@@ -288,12 +296,14 @@ export class EditionService {
         return {
           headers: finalHeaders.length > 0 ? finalHeaders : this.REQUIRED_COLUMNS,
           rows: [],
+          ignoredFiles: ignoredFiles.length > 0 ? ignoredFiles : undefined,
         };
       }
 
       return {
         headers: finalHeaders,
         rows: deduplicatedRows,
+        ignoredFiles: ignoredFiles.length > 0 ? ignoredFiles : undefined,
       };
     } catch (error: any) {
       // En cas d'erreur, retourner une structure vide au lieu de lancer une erreur
@@ -301,6 +311,7 @@ export class EditionService {
       return {
         headers: this.REQUIRED_COLUMNS,
         rows: [],
+        ignoredFiles: undefined,
       };
     }
   }
@@ -310,6 +321,10 @@ export class EditionService {
    */
   static async saveEditionData(rows: EditionRow[]): Promise<void> {
     try {
+      // Charger le chemin du dossier de données depuis les settings
+      const settings = await ConfigService.loadSettings();
+      const dataDirectory = settings.dataDirectory || 'data';
+      
       // Filtrer les lignes actives (non supprimées)
       const activeRows = rows.filter(row => !row.deleted);
 
@@ -360,8 +375,13 @@ export class EditionService {
         groupedData[source].push(row);
       }
 
-      // Sauvegarder chaque fichier séparément
-      for (const [source, fileRows] of Object.entries(groupedData)) {
+      // Fonction helper pour permettre au navigateur de traiter les événements
+      const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 0));
+
+      // Sauvegarder chaque fichier séparément avec des pauses pour permettre au navigateur de respirer
+      const fileEntries = Object.entries(groupedData);
+      for (let i = 0; i < fileEntries.length; i++) {
+        const [source, fileRows] = fileEntries[i];
         try {
           // Si le fichier est vide (toutes les lignes supprimées), passer au suivant
           if (fileRows.length === 0) {
@@ -480,9 +500,12 @@ export class EditionService {
                 });
 
                 // Sauvegarder le fichier
-                const filePath = `data/${newSource}`;
+                const filePath = `${dataDirectory}/${newSource}`;
                 await FileService.writeFile(filePath, csv);
                 console.log(`[EditionService] Fichier ${newSource} sauvegardé avec succès (${compteRows.length} lignes)`);
+                
+                // Permettre au navigateur de traiter les événements après chaque sauvegarde
+                await yieldToBrowser();
               }
 
               // Continuer avec le fichier suivant (les lignes incohérentes ont été séparées)
@@ -538,10 +561,16 @@ export class EditionService {
           });
 
           // Sauvegarder le fichier
-          const filePath = `data/${source}`;
+          const filePath = `${dataDirectory}/${source}`;
           await FileService.writeFile(filePath, csv);
 
           console.log(`[EditionService] Fichier ${source} sauvegardé avec succès (${fileRows.length} lignes)`);
+          
+          // Permettre au navigateur de traiter les événements après chaque sauvegarde
+          // Sauf pour le dernier fichier
+          if (i < fileEntries.length - 1) {
+            await yieldToBrowser();
+          }
         } catch (error: any) {
           console.error(`Erreur lors de la sauvegarde du fichier ${source}:`, error);
           throw new Error(`Erreur lors de la sauvegarde du fichier ${source}: ${error.message}`);
@@ -562,7 +591,11 @@ export class EditionService {
     inconsistenciesFixed: number;
   }> {
     try {
-      const files = await FileService.readDirectory('data');
+      // Charger le chemin du dossier de données depuis les settings
+      const settings = await ConfigService.loadSettings();
+      const dataDirectory = settings.dataDirectory || 'data';
+      
+      const files = await FileService.readDirectory(dataDirectory);
       const csvFiles = files.filter(file => file.endsWith('.csv'));
       const bankAccounts = await ConfigService.loadAccounts();
       
@@ -572,7 +605,7 @@ export class EditionService {
 
       for (const fileName of csvFiles) {
         try {
-          const filePath = `data/${fileName}`;
+          const filePath = `${dataDirectory}/${fileName}`;
           const content = await FileService.readFile(filePath);
           
           const result = await new Promise<any>((resolve) => {

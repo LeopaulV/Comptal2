@@ -1,0 +1,8 @@
+Source;Compte;Date;Date de valeur;Débit;Crédit;Libellé;Solde;catégorie;Solde initial;Index
+Lplus_01.02.2025_31.05.2025.csv;Livret +;04/02/2025;04/02/2025;0;2000;VIR Virement avec Fortuneo Livre;22000.000000000004;X;22000.000000000004;20250204,22000
+Lplus_01.02.2025_31.05.2025.csv;Livret +;18/03/2025;18/03/2025;0;6000;VIR Virement avec Fortuneo Livre;28000.000000000004;X;0;20250318,28000
+Lplus_01.02.2025_31.05.2025.csv;Livret +;04/04/2025;04/04/2025;-5000;0;VIR Virement avec Fortuneo Compt;23000.000000000004;X;0;20250404,23000
+Lplus_01.02.2025_31.05.2025.csv;Livret +;07/04/2025;07/04/2025;0;10000;VIR Virement avec Fortuneo Livre;33000;X;0;20250407,33000
+Lplus_01.02.2025_31.05.2025.csv;Livret +;08/04/2025;08/04/2025;-1072;0;VIR Virement avec Fortuneo Compt;31928.000000000004;X;0;20250408,31928
+Lplus_01.02.2025_31.05.2025.csv;Livret +;08/04/2025;08/04/2025;0;4000;VIR Virement avec Fortuneo Livre;35928;X;0;20250408,35928
+Lplus_01.02.2025_31.05.2025.csv;Livret +;30/04/2025;30/04/2025;0;4172;VIR Virement avec Fortuneo Livre;40100;X;0;20250430,40100

@@ -1,2 +1,42 @@
-{}
-
+{
+    "AVL": {
+        "name": "Leopaul Assurance Vie",
+        "color": "#000080"
+    },
+    "CCAL": {
+        "name": "Compte courant (A&L)",
+        "color": "#d6d6d6"
+    },
+    "FOR": {
+        "name": "Fortuneo CC",
+        "color": "#0000FF"
+    },
+    "LBL": {
+        "name": "Livret bleu (L)",
+        "color": "#4169E1"
+    },
+    "LBA": {
+        "name": "Livret bleu (A)",
+        "color": "#1E90FF"
+    },
+    "LPL": {
+        "name": "Livret DDS (L)",
+        "color": "#00BFFF"
+    },
+    "LPA": {
+        "name": "Livret DDS (A)",
+        "color": "#87CEEB"
+    },
+    "CCHF": {
+        "name": "Compte courant suisse",
+        "color": "#ADD8E6"
+    },
+    "N26": {
+        "name": "N26",
+        "color": "#E0F7FA"
+    },
+    "LPLUS": {
+        "name": "Livret +",
+        "color": "#B0E0E6"
+    }
+}

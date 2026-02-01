@@ -1,0 +1,84 @@
+REPOSITORY DETAILS POUR GITHUB
+================================
+
+DESCRIPTION (courte)
+--------------------
+Logiciel de comptabilité moderne multi-plateforme pour la gestion et l'analyse de vos transactions financières.
+
+DESCRIPTION COMPLÈTE
+--------------------
+Comptal2 est une application desktop développée avec Electron et React qui permet de gérer efficacement vos transactions bancaires. L'application offre une interface intuitive pour importer, analyser et visualiser vos données financières avec des graphiques et des statistiques détaillées.
+
+TOPICS / TAGS
+-------------
+comptabilité
+finance
+electron
+react
+typescript
+vite
+tailwindcss
+desktop-application
+accounting-software
+financial-management
+transaction-analysis
+budget-manager
+france
+français
+
+WEBSITE (optionnel)
+-------------------
+(Laissez vide si vous n'avez pas de site web)
+
+LICENSE
+-------
+MIT
+
+AUTHOR
+------
+Leopaul
+
+VERSION
+-------
+1.0.0
+
+FONCTIONNALITÉS PRINCIPALES
+----------------------------
+- Import de fichiers CSV et Excel avec détection automatique des colonnes
+- Tableau de bord avec statistiques et graphiques interactifs
+- Filtres avancés (compte, catégorie, période, recherche textuelle)
+- Édition et gestion des transactions
+- Analyse financière avec graphiques détaillés
+- Catégorisation automatique des transactions
+- Gestion multi-comptes
+- Export des données au format CSV
+- Support du thème sombre
+- Interface multi-langues (français et anglais)
+
+TECHNOLOGIES UTILISÉES
+----------------------
+- Electron
+- React
+- TypeScript
+- Vite
+- Chart.js / Recharts
+- Tailwind CSS
+- i18next
+
+PLATEFORMES SUPPORTÉES
+----------------------
+- Windows
+- macOS
+- Linux
+
+INSTRUCTIONS POUR GITHUB
+========================
+
+1. Allez dans Settings > General de votre dépôt GitHub
+2. Dans la section "Repository details", remplissez :
+   - Description : Utilisez la description courte ci-dessus
+   - Website : Laissez vide ou ajoutez votre site web si disponible
+   - Topics : Ajoutez les topics listés ci-dessus (séparés par des virgules ou en les ajoutant un par un)
+
+3. Pour ajouter les topics, cliquez sur le bouton "Add topics" et ajoutez-les un par un ou collez-les séparés par des virgules.
+

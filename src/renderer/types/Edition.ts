@@ -21,5 +21,6 @@ export interface EditionRow {
 export interface EditionData {
   headers: string[];
   rows: EditionRow[];
+  ignoredFiles?: Array<{ fileName: string; accountCode: string }>; // Fichiers ignorés car le compte n'existe pas
 }
 

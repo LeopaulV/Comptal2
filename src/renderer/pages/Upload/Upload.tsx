@@ -6,6 +6,7 @@ import FileDropzone from '../../components/Upload/FileDropzone';
 import ColumnMappingInterface from '../../components/Upload/ColumnMappingInterface';
 import ExcelSheetSelector from '../../components/Upload/ExcelSheetSelector';
 import ImportPreviewTable from '../../components/Upload/ImportPreviewTable';
+import ManualDataCreator from '../../components/Upload/ManualDataCreator';
 import { FileDetectionService } from '../../services/FileDetectionService';
 import { ColumnMappingService } from '../../services/ColumnMappingService';
 import { CSVTransformService } from '../../services/CSVTransformService';
@@ -20,7 +21,7 @@ import { ExcelSheetInfo, SheetImportConfig } from '../../types/ExcelImport';
 import { AccountsConfig } from '../../types/Account';
 import { format, parse } from 'date-fns';
 
-type UploadStep = 'select' | 'sheet-selection' | 'analyzing' | 'analysis' | 'mapping' | 'config' | 'preview' | 'uploading' | 'success' | 'error';
+type UploadStep = 'select' | 'manual-create' | 'sheet-selection' | 'analyzing' | 'analysis' | 'mapping' | 'config' | 'preview' | 'uploading' | 'success' | 'error';
 
 const Upload: React.FC = () => {
   const { t } = useTranslation();
@@ -618,8 +619,9 @@ const Upload: React.FC = () => {
         setStep('error');
       }
     } else {
-      // Import CSV : workflow existant
-      if (!selectedFile || !columnMapping || !selectedAccountCode || transformedRows.length === 0) {
+      // Import CSV ou création manuelle : workflow existant
+      // Pour la création manuelle, selectedFile peut être null
+      if ((!selectedFile && transformedRows.length === 0) || !selectedAccountCode || transformedRows.length === 0) {
         return;
       }
 
@@ -664,6 +666,29 @@ const Upload: React.FC = () => {
         setStep('error');
       }
     }
+  };
+
+  // Handler pour la création manuelle
+  const handleManualCreateConfirm = (
+    rows: TransformedRow[],
+    accountCode: string,
+    balance: number
+  ) => {
+    console.log('[Import] Création manuelle confirmée:', {
+      compte: accountCode,
+      transactions: rows.length,
+      soldeInitial: balance
+    });
+
+    // Définir les données pour la prévisualisation
+    setTransformedRows(rows);
+    setSelectedAccountCode(accountCode);
+    setInitialBalance(balance);
+    setBalanceFromFile(null);
+    setIsExcel(false);
+
+    // Passer directement à la prévisualisation
+    setStep('preview');
   };
 
   const handleReset = () => {
@@ -768,9 +793,42 @@ const Upload: React.FC = () => {
 
       {/* Contenu */}
       {step === 'select' && (
-        <Card>
-          <FileDropzone onFilesSelected={handleFilesSelected} />
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <FileDropzone onFilesSelected={handleFilesSelected} />
+          </Card>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {t('common.or', 'ou')}
+            </span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+          </div>
+          <Card>
+            <div className="text-center py-8">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {t('upload.manualCreate.title')}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                {t('upload.manualCreate.description')}
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => setStep('manual-create')}
+              >
+                {t('upload.createManually')}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {step === 'manual-create' && (
+        <ManualDataCreator
+          accounts={accounts}
+          onConfirm={handleManualCreateConfirm}
+          onCancel={handleReset}
+        />
       )}
 
       {step === 'sheet-selection' && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
-import { AccountSummary } from '@types/Account';
+import { AccountSummary } from '../../types/Account';
 import { formatCurrency } from '../../utils/format';
 
 interface AccountCardProps {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import ThemeToggle from './ThemeToggle';
+import ZoomControl from './ZoomControl';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -30,6 +31,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           <div className="flex-1" />
           
           <div className="flex items-center gap-4">
+            <ZoomControl />
             <ThemeToggle />
           </div>
         </header>

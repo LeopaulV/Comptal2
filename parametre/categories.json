@@ -1,15 +1,94 @@
 {
-  "!!!": {
-    "name": "ERREUR",
-    "color": "#FFB3BA"
-  },
-  "???": {
-    "name": "INCONNUE",
-    "color": "#ffb8b8"
-  },
-  "X": {
-    "name": "TIC",
-    "color": "#ffffff"
-  }
+    "A": {
+        "name": "Alimentaire",
+        "color": "#d9d9d9"
+    },
+    "B": {
+        "name": "Banque et Assurance",
+        "color": "#b8cdff"
+    },
+    "C": {
+        "name": "cadeau",
+        "color": "#BAE1FF"
+    },
+    "D": {
+        "name": "Divertissement",
+        "color": "#e09eff"
+    },
+    "E": {
+        "name": "Essence",
+        "color": "#bdbdbd"
+    },
+    "G": {
+        "name": "Gaz et Éléctricité",
+        "color": "#ddd5a1"
+    },
+    "H": {
+        "name": "Habit",
+        "color": "#f4dbff"
+    },
+    "I": {
+        "name": "Impôt",
+        "color": "#ffc766"
+    },
+    "L": {
+        "name": "Logement",
+        "color": "#AED6F1"
+    },
+    "M": {
+        "name": "Mobilier et Matériel",
+        "color": "#bbb3ff"
+    },
+    "P": {
+        "name": "Téléphonie",
+        "color": "#dfcd8b"
+    },
+    "R": {
+        "name": "Restaurant",
+        "color": "#FFFFBA"
+    },
+    "S": {
+        "name": "Soutien",
+        "color": "#8bc0ea"
+    },
+    "T": {
+        "name": "Transport",
+        "color": "#7d7d7d"
+    },
+    "V": {
+        "name": "Voyage",
+        "color": "#9d84a9"
+    },
+    "W": {
+        "name": "Mariage",
+        "color": "#ffbdf9"
+    },
+    "Y": {
+        "name": "Salaire",
+        "color": "#abea95"
+    },
+    "X": {
+        "name": "TIC",
+        "color": "#ffffff"
+    },
+    "K": {
+        "name": "Enfant",
+        "color": "#fded63"
+    },
+    "F": {
+        "name": "Santé",
+        "color": "#b8ffe0"
+    },
+    "Q": {
+        "name": "Maison",
+        "color": "#c2b3cc"
+    },
+    "!": {
+        "name": "ERREUR",
+        "color": "#FFB3BA"
+    },
+    "?": {
+        "name": "INCONNUE",
+        "color": "#ffb8b8"
+    }
 }
-

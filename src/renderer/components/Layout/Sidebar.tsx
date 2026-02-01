@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -7,10 +7,14 @@ import {
   faUpload, 
   faEdit, 
   faChartBar, 
+  faTasks,
+  faFileInvoice,
   faCog,
   faChevronLeft,
   faChevronRight
 } from '@fortawesome/free-solid-svg-icons';
+import { ConfigService } from '../../services/ConfigService';
+import { MenuVisibility, DEFAULT_MENU_VISIBILITY } from '../../types/Settings';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -21,19 +25,42 @@ interface MenuItem {
   path: string;
   icon: any;
   label: string;
+  key: keyof MenuVisibility | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const { t } = useTranslation();
   const location = useLocation();
+  const [menuVisibility, setMenuVisibility] = useState<MenuVisibility>(DEFAULT_MENU_VISIBILITY);
 
-  const menuItems: MenuItem[] = [
-    { path: '/dashboard', icon: faChartLine, label: t('navigation.dashboard') },
-    { path: '/upload', icon: faUpload, label: t('navigation.import') },
-    { path: '/edition', icon: faEdit, label: t('navigation.edition') },
-    { path: '/finance-global', icon: faChartBar, label: t('navigation.financeGlobal') },
-    { path: '/parametre', icon: faCog, label: t('navigation.settings') },
+  // Charger la visibilité du menu depuis les paramètres
+  useEffect(() => {
+    const loadMenuVisibility = async () => {
+      try {
+        const settings = await ConfigService.loadSettings();
+        setMenuVisibility(settings.menuVisibility || DEFAULT_MENU_VISIBILITY);
+      } catch (error) {
+        console.error('Erreur lors du chargement de la visibilité du menu:', error);
+      }
+    };
+    loadMenuVisibility();
+  }, []);
+
+  const allMenuItems: MenuItem[] = [
+    { path: '/dashboard', icon: faChartLine, label: t('navigation.dashboard'), key: 'dashboard' as keyof MenuVisibility },
+    { path: '/upload', icon: faUpload, label: t('navigation.import'), key: 'upload' as keyof MenuVisibility },
+    { path: '/edition', icon: faEdit, label: t('navigation.edition'), key: 'edition' as keyof MenuVisibility },
+    { path: '/finance-global', icon: faChartBar, label: t('navigation.financeGlobal'), key: 'financeGlobal' as keyof MenuVisibility },
+    { path: '/project-management', icon: faTasks, label: t('navigation.projectManagement'), key: 'projectManagement' as keyof MenuVisibility },
+    { path: '/invoicing', icon: faFileInvoice, label: t('navigation.invoicing'), key: 'invoicing' as keyof MenuVisibility },
+    { path: '/parametre', icon: faCog, label: t('navigation.settings'), key: null }, // Paramètres toujours visible
   ];
+
+  // Filtrer les éléments du menu selon la visibilité
+  const menuItems = allMenuItems.filter(item => {
+    if (item.key === null) return true; // Paramètres toujours visible
+    return menuVisibility[item.key];
+  });
 
   return (
     <aside

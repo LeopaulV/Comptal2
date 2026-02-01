@@ -63,6 +63,7 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        data-tour-step="import-data"
         className={`
           border-2 border-dashed rounded-lg p-12 text-center
           transition-colors cursor-pointer

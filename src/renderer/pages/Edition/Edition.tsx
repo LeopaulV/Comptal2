@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef, useDeferredValue, startTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDebounce } from 'use-debounce';
+import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faMagic, faTags, faFilter, faSearch, faCheckCircle, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faMagic, faTags, faFilter, faSearch, faCheckCircle, faTrashAlt, faChevronLeft, faChevronRight, faExclamationTriangle, faCircleNotch, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 import { Loading, EmptyState } from '../../components/Common';
 import SourceFilterPanel from '../../components/Edition/SourceFilterPanel';
 import CategoryFilterPanel from '../../components/Edition/CategoryFilterPanel';
+import PeriodFilterPanel from '../../components/Edition/PeriodFilterPanel';
 import CsvEditorTable, { CsvEditorTableRef } from '../../components/Edition/CsvEditorTable';
 import AutoCategorisationReviewModal from '../../components/Edition/AutoCategorisationReviewModal';
 import CategoryLegendPanel from '../../components/Edition/CategoryLegendPanel';
@@ -25,16 +27,20 @@ const Edition: React.FC = () => {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showUncategorized, setShowUncategorized] = useState(true);
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
-  const [activeFilterTab, setActiveFilterTab] = useState<'source' | 'category'>('source');
+  const [activeFilterTab, setActiveFilterTab] = useState<'source' | 'category' | 'period'>('source');
   const [saving, setSaving] = useState(false);
   const [autoCategorisationStats, setAutoCategorisationStats] = useState<WordStatsMap>({});
   const [pendingAutoCategorisation, setPendingAutoCategorisation] = useState<PendingAutoCategorisation[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isLegendCollapsed, setIsLegendCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [ignoredFiles, setIgnoredFiles] = useState<Array<{ fileName: string; accountCode: string }>>([]);
   const csvTableRef = useRef<CsvEditorTableRef>(null);
 
   useEffect(() => {
@@ -47,22 +53,25 @@ const Edition: React.FC = () => {
     setIsDataLoading(true);
     try {
       const data = await EditionService.loadEditionData();
-      // Filtrer les colonnes "Solde initial" et "Index" pour ne pas les afficher
+      // Filtrer les colonnes "Solde initial", "Index", "Source" et "Date de valeur" pour ne pas les afficher
       const filteredHeaders = data.headers.filter(
-        header => header !== 'Solde initial' && header !== 'Index'
+        header => header !== 'Solde initial' && header !== 'Index' && header !== 'Source' && header !== 'Date de valeur'
       );
       setHeaders(filteredHeaders);
       setAllRows(data.rows);
+      
+      // Stocker les fichiers ignorés pour afficher un avertissement
+      setIgnoredFiles(data.ignoredFiles || []);
       
       // Initialiser les sources sélectionnées avec toutes les sources uniques
       const uniqueSources = [...new Set(data.rows.map(row => row.Source))];
       setSelectedSources(uniqueSources);
       
       // Réinitialiser les modifications locales après le chargement
-      csvTableRef.current?.clearModifications();
+      csvTableRef.current?.clearModifications(true); // true = effacer toutes les modifications
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      alert('Erreur lors du chargement des données. Vérifiez la console pour plus de détails.');
+      toast.error('Erreur lors du chargement des données. Vérifiez la console pour plus de détails.');
     } finally {
       setIsLoading(false);
       setIsDataLoading(false);
@@ -112,18 +121,68 @@ const Edition: React.FC = () => {
   const deferredFilteredByCategory = useDeferredValue(filteredByCategory);
   const deferredSearchTerm = useDeferredValue(debouncedSearchTerm);
   
+  // Filtrer par période (date)
+  const filteredByPeriod = useMemo(() => {
+    if (!startDate && !endDate) return deferredFilteredByCategory;
+    
+    // Fonction pour convertir dd/MM/yyyy en Date
+    const parseDate = (dateStr: string): Date | null => {
+      if (!dateStr) return null;
+      const [day, month, year] = dateStr.split('/');
+      if (day && month && year) {
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+      return null;
+    };
+    
+    return deferredFilteredByCategory.filter(row => {
+      const rowDate = parseDate(row.Date);
+      if (!rowDate) return false; // Exclure les lignes sans date valide
+      
+      // Normaliser les dates pour comparaison (début de journée)
+      const rowDateNormalized = new Date(rowDate);
+      rowDateNormalized.setHours(0, 0, 0, 0);
+      
+      // Vérifier la date de début
+      if (startDate) {
+        const startDateObj = parseDate(startDate);
+        if (startDateObj) {
+          const startDateNormalized = new Date(startDateObj);
+          startDateNormalized.setHours(0, 0, 0, 0);
+          if (rowDateNormalized < startDateNormalized) {
+            return false;
+          }
+        }
+      }
+      
+      // Vérifier la date de fin
+      if (endDate) {
+        const endDateObj = parseDate(endDate);
+        if (endDateObj) {
+          const endDateNormalized = new Date(endDateObj);
+          endDateNormalized.setHours(23, 59, 59, 999);
+          if (rowDateNormalized > endDateNormalized) {
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    });
+  }, [deferredFilteredByCategory, startDate, endDate]);
+  
   // Filtrer par recherche textuelle (avec debouncing)
   const filteredBySearch = useMemo(() => {
-    if (!deferredSearchTerm.trim()) return deferredFilteredByCategory;
+    if (!deferredSearchTerm.trim()) return filteredByPeriod;
     
     const term = deferredSearchTerm.toLowerCase();
-    return deferredFilteredByCategory.filter(row => {
+    return filteredByPeriod.filter(row => {
       return Object.values(row).some(value => {
         if (value === null || value === undefined) return false;
         return String(value).toLowerCase().includes(term);
       });
     });
-  }, [deferredFilteredByCategory, deferredSearchTerm]);
+  }, [filteredByPeriod, deferredSearchTerm]);
 
   // Trier les lignes
   const sortedRows = useMemo(() => {
@@ -304,22 +363,41 @@ const Edition: React.FC = () => {
   }, []);
 
   const handleSave = useCallback(async () => {
+    console.log('[Edition] Début de la sauvegarde...');
+    
+    // IMPORTANT: Réinitialiser l'état d'édition AVANT de commencer la sauvegarde
+    // Cette fonction va détecter l'élément actif, appliquer sa modification, puis forcer le blur
+    // false = ne pas effacer les modifications, seulement réinitialiser l'état d'édition
+    csvTableRef.current?.clearModifications(false);
+    console.log('[Edition] État d\'édition réinitialisé');
+    
+    // Attendre que le blur soit traité et que les modifications soient appliquées
+    // Utiliser plusieurs ticks pour s'assurer que tout est bien traité
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     setSaving(true);
-    setIsDataLoading(true);
+    let saveSuccess = false;
+    let saveError: Error | null = null;
     try {
       // Récupérer les modifications locales depuis CsvEditorTable
       const modifiedRows = csvTableRef.current?.getModifiedRows() || [];
+      console.log('[Edition] Modifications détectées:', modifiedRows.length, 'lignes');
+      
+      // Toujours créer updatedRows pour avoir les données à jour
+      let updatedRows: EditionRow[] = [...allRows];
       
       if (modifiedRows.length === 0) {
         // Vérifier aussi les lignes déjà modifiées dans allRows (pour compatibilité)
         const rowsToSave = allRows.filter(row => row.modified || row.deleted);
         if (rowsToSave.length === 0) {
-          alert(t('edition.noChanges'));
+          toast.info(t('edition.noChanges'));
+          console.log('[Edition] Aucune modification à sauvegarder - le finally s\'occupera de setSaving(false)');
+          // Note: setSaving(false) sera appelé dans le finally, pas besoin de l'appeler ici
           return;
         }
+        // updatedRows contient déjà les lignes modifiées
       } else {
         // Appliquer toutes les modifications locales à allRows en une seule fois
-        const updatedRows = [...allRows];
         const currentIndexMap = new Map<string, number>();
         
         // Reconstruire la map pour les lignes actuelles
@@ -355,8 +433,6 @@ const Edition: React.FC = () => {
           }
         });
         
-        setAllRows(updatedRows);
-        
         // Sauvegarder les stats si elles ont été mises à jour
         if (statsUpdated) {
           try {
@@ -367,23 +443,35 @@ const Edition: React.FC = () => {
           }
         }
         
-        // Nettoyer les modifications locales
-        csvTableRef.current?.clearModifications();
+        // Note: clearModifications() a déjà été appelé au début de handleSave
       }
       
+      // Mettre à jour l'état avec les lignes modifiées
+      setAllRows(updatedRows);
+      
       // Sauvegarder toutes les lignes (le service gère le regroupement par fichier)
-      await EditionService.saveEditionData(allRows);
+      // IMPORTANT: Utiliser updatedRows au lieu de allRows pour sauvegarder les modifications
+      console.log('[Edition] Appel de EditionService.saveEditionData...');
+      await EditionService.saveEditionData(updatedRows);
+      console.log('[Edition] Écriture des fichiers terminée');
+      console.log('[Edition] Sauvegarde terminée avec succès');
+      saveSuccess = true;
       
-      alert(t('edition.saveSuccess'));
-      
-      // Recharger les données
-      await loadData();
+      // Pas besoin de recharger les données : elles sont déjà à jour dans allRows via setAllRows(updatedRows)
     } catch (error: any) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      alert(t('edition.saveError', { error: error.message }));
+      console.error('[Edition] Erreur lors de la sauvegarde:', error);
+      saveError = error;
     } finally {
+      console.log('[Edition] Fin de la fonction handleSave, réinitialisation de l\'état saving');
       setSaving(false);
-      setIsDataLoading(false);
+      console.log('[Edition] État saving réinitialisé à false');
+      
+      // Afficher la notification (non-bloquant, ne perturbe pas le focus)
+      if (saveSuccess) {
+        toast.success(t('edition.saveSuccess'));
+      } else if (saveError) {
+        toast.error(t('edition.saveError', { error: saveError.message }));
+      }
     }
   }, [allRows, autoCategorisationStats, t]);
 
@@ -395,11 +483,11 @@ const Edition: React.FC = () => {
     try {
       setIsDataLoading(true);
       const result = await EditionService.cleanDuplicateCSVFiles();
-      alert(t('edition.cleanSuccess', { cleaned: result.cleaned, fixed: result.inconsistenciesFixed, files: result.filesProcessed }));
+      toast.success(t('edition.cleanSuccess', { cleaned: result.cleaned, fixed: result.inconsistenciesFixed, files: result.filesProcessed }));
       await loadData(); // Recharger les données
     } catch (error: any) {
       console.error('Erreur lors du nettoyage:', error);
-      alert(t('edition.cleanError', { error: error.message }));
+      toast.error(t('edition.cleanError', { error: error.message }));
     } finally {
       setIsDataLoading(false);
     }
@@ -417,7 +505,7 @@ const Edition: React.FC = () => {
       });
 
       if (uncategorizedRows.length === 0) {
-        alert(t('edition.autoCategorizeNoRows'));
+        toast.info(t('edition.autoCategorizeNoRows'));
         setIsDataLoading(false);
         return;
       }
@@ -454,7 +542,7 @@ const Edition: React.FC = () => {
       });
 
       if (suggestions.length === 0) {
-        alert(t('edition.autoCategorizeNoSuggestions'));
+        toast.info(t('edition.autoCategorizeNoSuggestions'));
         setIsDataLoading(false);
         return;
       }
@@ -464,7 +552,7 @@ const Edition: React.FC = () => {
       setShowReviewModal(true);
     } catch (error: any) {
       console.error('Erreur lors de l\'auto-catégorisation:', error);
-      alert(t('edition.autoCategorizeError', { error: error.message }));
+      toast.error(t('edition.autoCategorizeError', { error: error.message }));
     } finally {
       setIsDataLoading(false);
     }
@@ -520,10 +608,10 @@ const Edition: React.FC = () => {
       setShowReviewModal(false);
       setPendingAutoCategorisation([]);
       
-      alert(t('edition.autoCategorizeSuccess', { count: categorizedCount }));
+      toast.success(t('edition.autoCategorizeSuccess', { count: categorizedCount }));
     } catch (error: any) {
       console.error('Erreur lors de la validation de l\'auto-catégorisation:', error);
-      alert(t('edition.autoCategorizeConfirmError', { error: error.message }));
+      toast.error(t('edition.autoCategorizeConfirmError', { error: error.message }));
     } finally {
       setIsDataLoading(false);
     }
@@ -536,9 +624,11 @@ const Edition: React.FC = () => {
 
   // Détecter l'absence de données (après le chargement initial)
   const hasNoData = allRows.length === 0;
+  const hasIgnoredFiles = ignoredFiles.length > 0;
 
-  // Afficher EmptyState si aucune donnée n'est disponible
-  if (hasNoData) {
+  // Afficher EmptyState si aucune donnée n'est disponible ET qu'il n'y a pas de fichiers ignorés
+  // Si des fichiers ont été ignorés, on affiche le message d'avertissement dans le contenu principal
+  if (hasNoData && !hasIgnoredFiles) {
     return (
       <div className={`editor-container ${isDataLoading ? 'loading' : ''}`}>
         <EmptyState
@@ -553,17 +643,32 @@ const Edition: React.FC = () => {
   return (
     <div className={`editor-container ${isDataLoading ? 'loading' : ''}`}>
       {/* Sidebar avec filtres */}
-      <aside className="editor-sidebar">
-        <h3>{t('edition.options')}</h3>
+      <aside className={`editor-sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          {!isSidebarCollapsed && <h3>{t('edition.options')}</h3>}
+          <button
+            className="sidebar-collapse-button"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            title={isSidebarCollapsed ? t('edition.expandSidebar', 'Afficher les filtres') : t('edition.collapseSidebar', 'Masquer les filtres')}
+          >
+            <FontAwesomeIcon icon={isSidebarCollapsed ? faChevronRight : faChevronLeft} />
+          </button>
+        </div>
         
-        {/* Boutons d'action */}
-        <div className="action-buttons">
+        {!isSidebarCollapsed && (
+          <>
+            {/* Boutons d'action */}
+            <div className="action-buttons">
           <button
             onClick={handleSave}
             className="action-button"
             disabled={saving}
           >
-            <FontAwesomeIcon icon={faSave} />
+            <span className={saving ? 'spinning-icon' : ''}>
+              <FontAwesomeIcon 
+                icon={saving ? faCircleNotch : faSave}
+              />
+            </span>
             <span>{saving ? t('edition.saving') : t('edition.save')}</span>
           </button>
           <button
@@ -600,6 +705,13 @@ const Edition: React.FC = () => {
               <FontAwesomeIcon icon={faTags} />
               {t('edition.filtersByCategory')}
             </button>
+            <button
+              className={`filter-nav-button ${activeFilterTab === 'period' ? 'active' : ''}`}
+              onClick={() => setActiveFilterTab('period')}
+            >
+              <FontAwesomeIcon icon={faCalendarAlt} />
+              {t('edition.filtersByPeriod')}
+            </button>
           </div>
 
           {/* Contenu des filtres */}
@@ -630,8 +742,24 @@ const Edition: React.FC = () => {
                 }}
               />
             </div>
+
+            {/* Filtres par période */}
+            <div className={`filter-content ${activeFilterTab === 'period' ? 'active' : ''}`}>
+              <PeriodFilterPanel
+                startDate={startDate}
+                endDate={endDate}
+                onPeriodChange={(start, end) => {
+                  startTransition(() => {
+                    setStartDate(start);
+                    setEndDate(end);
+                  });
+                }}
+              />
+            </div>
           </div>
         </div>
+          </>
+        )}
       </aside>
 
       {/* Contenu principal */}
@@ -651,6 +779,41 @@ const Edition: React.FC = () => {
           </div>
         </div>
 
+        {/* Message d'avertissement pour les fichiers ignorés */}
+        {ignoredFiles.length > 0 && (
+          <div style={{
+            margin: '1rem 0',
+            padding: '1rem',
+            backgroundColor: '#fef3c7',
+            border: '1px solid #f59e0b',
+            borderRadius: '0.5rem',
+            color: '#92400e',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem'
+          }}>
+            <FontAwesomeIcon icon={faExclamationTriangle} style={{ marginTop: '0.125rem', flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontWeight: 600, marginBottom: '0.5rem' }}>
+                {t('edition.ignoredFilesTitle', 'Aucune source de données n\'a de compte correspondant')}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                {t('edition.ignoredFilesMessage', 'Les fichiers suivants ont été ignorés car leur code de compte n\'existe pas dans la configuration :')}
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem' }}>
+                {ignoredFiles.map((file, index) => (
+                  <li key={index}>
+                    <strong>{file.fileName}</strong> ({t('edition.accountCode', 'Code compte')}: {file.accountCode})
+                  </li>
+                ))}
+              </ul>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                {t('edition.ignoredFilesHint', 'Ajoutez ces comptes dans les paramètres pour pouvoir éditer ces fichiers.')}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Conteneur flex pour tableau et légende */}
         <div className="table-legend-container">
           {/* Tableau */}
@@ -667,6 +830,21 @@ const Edition: React.FC = () => {
                   <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: '3rem', marginBottom: '1rem' }} />
                   <p style={{ margin: 0, fontWeight: 600 }}>
                     {t('edition.allCategorized')}
+                  </p>
+                </div>
+              ) : hasIgnoredFiles ? (
+                <div className="empty-state-message" style={{
+                  padding: '3rem',
+                  textAlign: 'center',
+                  color: 'var(--text-secondary, #6b7280)',
+                  fontSize: '1.1rem'
+                }}>
+                  <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: '3rem', marginBottom: '1rem', color: '#f59e0b' }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>
+                    {t('edition.noDataDueToIgnoredFiles', 'Aucune donnée disponible')}
+                  </p>
+                  <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+                    {t('edition.noDataDueToIgnoredFilesHint', 'Tous les fichiers ont été ignorés car leurs codes de compte n\'existent pas dans la configuration. Consultez le message ci-dessus pour plus de détails.')}
                   </p>
                 </div>
               ) : (

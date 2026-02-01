@@ -5,7 +5,8 @@ import { AccountSummary } from '../types/Account';
 import { CategorySummary } from '../types/Category';
 import { CSVService } from './CSVService';
 import { ConfigService } from './ConfigService';
-import { startOfMonth, format, parse } from 'date-fns';
+import { startOfMonth, startOfDay, format, parse, differenceInDays, differenceInMonths, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 export class DataService {
   private static transactions: Transaction[] = [];
@@ -18,10 +19,14 @@ export class DataService {
     if (this.isLoaded) return;
 
     try {
-      this.transactions = await CSVService.loadAllTransactions('data');
+      // Charger le chemin du dossier de données depuis les settings
+      const settings = await ConfigService.loadSettings();
+      const dataDirectory = settings.dataDirectory || 'data';
+      
+      this.transactions = await CSVService.loadAllTransactions(dataDirectory);
       // Accepter un tableau vide comme résultat valide (pas d'erreur)
       if (this.transactions.length === 0) {
-        console.warn('[DataService] Aucune transaction chargée. Le dossier data/ est vide ou n\'existe pas.');
+        console.warn(`[DataService] Aucune transaction chargée. Le dossier ${dataDirectory} est vide ou n'existe pas.`);
       }
       this.isLoaded = true;
     } catch (error: any) {
@@ -536,6 +541,163 @@ export class DataService {
       accounts: accountNames,
       monthlyData,
       accountColors,
+    };
+  }
+
+  /**
+   * Calcule les soldes de tous les comptes sur une période avec granularité dynamique
+   * - Si période < 1 mois : points quotidiens
+   * - Si période < 4 mois : points hebdomadaires
+   * - Si période >= 4 mois : points mensuels
+   * @param accountCodes - Codes de comptes à inclure (optionnel, si non fourni, tous les comptes sont inclus)
+   */
+  static async getAccountBalancesOverPeriod(
+    startDate: Date,
+    endDate: Date,
+    accountCodes?: string[]
+  ): Promise<{
+    periods: string[];
+    accounts: string[];
+    balanceData: number[][];
+    accountColors: Record<string, string>;
+    granularity: 'day' | 'week' | 'month';
+  }> {
+    const transactions = await this.getTransactions();
+    const accounts = await ConfigService.loadAccounts();
+
+    // Normaliser les dates
+    const start = startOfDay(startDate);
+    const end = startOfDay(endDate);
+    
+    // Déterminer la granularité selon la durée de la période
+    const daysDiff = differenceInDays(end, start);
+    const monthsDiff = differenceInMonths(end, start);
+    
+    let granularity: 'day' | 'week' | 'month';
+    let periodDates: Date[];
+    let periodLabels: string[];
+    
+    if (daysDiff < 30) {
+      // Moins de 1 mois : granularité quotidienne
+      granularity = 'day';
+      periodDates = eachDayOfInterval({ start, end });
+      periodLabels = periodDates.map(date => format(date, 'dd/MM', { locale: fr }));
+    } else if (monthsDiff < 4) {
+      // Moins de 4 mois : granularité hebdomadaire
+      granularity = 'week';
+      periodDates = eachWeekOfInterval(
+        { start, end },
+        { weekStartsOn: 1 } // Semaine commence le lundi
+      );
+      periodLabels = periodDates.map((_, index) => `Sem ${index + 1}`);
+    } else {
+      // 4 mois ou plus : granularité mensuelle
+      granularity = 'month';
+      periodDates = eachMonthOfInterval({ start, end });
+      periodLabels = periodDates.map(date => format(date, 'MMM yyyy', { locale: fr }));
+    }
+
+    // Obtenir tous les comptes uniques
+    const accountsSet = new Set<string>();
+    transactions.forEach(t => accountsSet.add(t.accountCode));
+    
+    // Filtrer les comptes selon le paramètre accountCodes si fourni
+    let accountList = Array.from(accountsSet);
+    if (accountCodes && accountCodes.length > 0) {
+      // Normaliser les codes pour la comparaison
+      const normalizedFilterCodes = accountCodes.map(code => (code || '').trim().toUpperCase());
+      accountList = accountList.filter(acc => 
+        normalizedFilterCodes.includes((acc || '').trim().toUpperCase())
+      );
+    }
+
+    // Grouper les transactions par compte et les trier par date
+    const transactionsByAccount = new Map<string, Transaction[]>();
+    transactions.forEach(t => {
+      if (!transactionsByAccount.has(t.accountCode)) {
+        transactionsByAccount.set(t.accountCode, []);
+      }
+      transactionsByAccount.get(t.accountCode)!.push(t);
+    });
+
+    // Pour chaque compte, trier les transactions par date
+    accountList.forEach(account => {
+      const accountTransactions = transactionsByAccount.get(account) || [];
+      accountTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+    });
+
+    // Calculer les soldes pour chaque période et chaque compte
+    const balanceData: number[][] = accountList.map(account => {
+      const accountTransactions = transactionsByAccount.get(account) || [];
+      const accountBalances: number[] = [];
+      let lastKnownBalance = 0;
+
+      periodDates.forEach((periodDate) => {
+        let periodEnd: Date;
+        
+        // Déterminer la fin de la période selon la granularité
+        if (granularity === 'day') {
+          // Pour les jours, la période est juste ce jour-là
+          periodEnd = new Date(periodDate);
+          periodEnd.setHours(23, 59, 59, 999);
+        } else if (granularity === 'week') {
+          // Pour les semaines, periodDate est déjà le début de la semaine
+          periodEnd = new Date(periodDate);
+          periodEnd.setDate(periodEnd.getDate() + 6); // Ajouter 6 jours pour avoir la fin de la semaine
+          periodEnd.setHours(23, 59, 59, 999);
+        } else {
+          // Mois : prendre la fin du mois
+          periodEnd = new Date(periodDate);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+          periodEnd.setDate(0); // Dernier jour du mois
+          periodEnd.setHours(23, 59, 59, 999);
+        }
+
+        // Trouver le dernier solde connu jusqu'à la fin de cette période
+        const transactionsUpToPeriod = accountTransactions.filter(t => {
+          const tDate = startOfDay(t.date);
+          const periodEndNormalized = startOfDay(periodEnd);
+          return tDate <= periodEndNormalized;
+        });
+
+        if (transactionsUpToPeriod.length > 0) {
+          // Trouver la transaction la plus récente avec un solde défini
+          let latestTransaction: Transaction | null = null;
+          for (let i = transactionsUpToPeriod.length - 1; i >= 0; i--) {
+            const t = transactionsUpToPeriod[i];
+            if (t.balance !== undefined && t.balance !== null) {
+              latestTransaction = t;
+              break;
+            }
+          }
+
+          if (latestTransaction) {
+            lastKnownBalance = latestTransaction.balance!;
+          }
+        }
+
+        accountBalances.push(lastKnownBalance);
+      });
+
+      return accountBalances;
+    });
+
+    // Créer le map de couleurs
+    const accountColors: Record<string, string> = {};
+    accountList.forEach(acc => {
+      const accConfig = accounts[acc];
+      accountColors[accConfig?.name || acc] = accConfig?.color || '#808080';
+    });
+
+    // Convertir les codes de compte en noms
+    const accountNames = accountList.map(acc => accounts[acc]?.name || acc);
+
+    return {
+      periods: periodLabels,
+      accounts: accountNames,
+      balanceData,
+      accountColors,
+      granularity,
     };
   }
 

@@ -80,11 +80,6 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
       return;
     }
 
-    if (code.length !== 1) {
-      alert('Le code doit être exactement un seul caractère');
-      return;
-    }
-
     if (categories[code]) {
       alert('Ce code de catégorie existe déjà');
       return;
@@ -247,11 +242,10 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
                 type="text"
                 value={newCategory.code}
                 onChange={(e) => {
-                  const value = e.target.value.toUpperCase().slice(0, 1);
+                  const value = e.target.value.toUpperCase();
                   setNewCategory({ ...newCategory, code: value });
                 }}
-                placeholder="Ex: A, B, C..."
-                maxLength={1}
+                placeholder="Ex: A, ALIM, TRANS..."
               />
             </div>
             <div className="form-group">
@@ -291,6 +285,7 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
           <button
             onClick={() => setIsAdding(true)}
             className="add-category-btn"
+            data-tour-step="create-category"
           >
             <FontAwesomeIcon icon={faPlus} />
             Ajouter une catégorie
