@@ -1,7 +1,8 @@
 // Service pour calculer les projections financières
 
-import { Subscription, ProjectionConfig, ProjectionData, ProjectionDataByAccount, AccountProjectionConfig, Periodicity } from '../types/ProjectManagement';
-import { addDays, addWeeks, addMonths, addQuarters, addYears, isAfter, isBefore, isSameDay, startOfDay, eachDayOfInterval, format, differenceInDays, differenceInWeeks, differenceInMonths, differenceInYears } from 'date-fns';
+import { Subscription, ProjectionConfig, ProjectionData, ProjectionDataByAccount, Periodicity } from '../types/ProjectManagement';
+import { ChartGranularity, getPeriodKey } from './DataService';
+import { addDays, addWeeks, addMonths, addQuarters, addYears, isAfter, isBefore, isSameDay, startOfDay, eachDayOfInterval, format, differenceInDays, differenceInWeeks, differenceInMonths } from 'date-fns';
 
 export class ProjectionService {
   /**
@@ -531,6 +532,132 @@ export class ProjectionService {
       debits,
       credits,
       netFlows,
+    };
+  }
+
+  /**
+   * Calcule les données agrégées par période (jour, semaine, mois, trimestre, semestre, année)
+   * pour alignement avec la toolbar de granularité Finance Global
+   */
+  static aggregateByPeriod(
+    projectionData: ProjectionData[],
+    granularity: ChartGranularity
+  ): {
+    months: string[];
+    balances: number[];
+    debits: number[];
+    credits: number[];
+    netFlows: number[];
+  } {
+    const periodData: Map<string, {
+      balance: number;
+      debits: number;
+      credits: number;
+      netFlow: number;
+    }> = new Map();
+
+    for (const data of projectionData) {
+      const periodKey = getPeriodKey(data.date, granularity);
+
+      if (!periodData.has(periodKey)) {
+        periodData.set(periodKey, {
+          balance: 0,
+          debits: 0,
+          credits: 0,
+          netFlow: 0,
+        });
+      }
+
+      const p = periodData.get(periodKey)!;
+      p.balance = data.balance;
+      p.debits += data.totalDebits;
+      p.credits += data.totalCredits;
+      p.netFlow += data.netFlow;
+    }
+
+    const months = Array.from(periodData.keys()).sort();
+    const balances = months.map((m) => periodData.get(m)!.balance);
+    const debits = months.map((m) => periodData.get(m)!.debits);
+    const credits = months.map((m) => periodData.get(m)!.credits);
+    const netFlows = months.map((m) => periodData.get(m)!.netFlow);
+
+    return {
+      months,
+      balances,
+      debits,
+      credits,
+      netFlows,
+    };
+  }
+
+  /**
+   * Agrège les charges (débits) par poste/abonnement et par période pour le graphique Bilan Financier.
+   * Retourne le détail par poste avec les couleurs attribuées.
+   */
+  static aggregateChargesBySubscriptionAndPeriod(
+    subscriptions: Subscription[],
+    config: ProjectionConfig,
+    granularity: ChartGranularity,
+    dateFrom?: Date | null,
+    dateTo?: Date | null
+  ): {
+    periodKeys: string[];
+    categories: string[];
+    monthlyData: number[][];
+    categoryColors: Record<string, string>;
+  } {
+    const flat = this.getAllFlatSubscriptions(subscriptions).filter((s) => s.type === 'debit');
+    if (flat.length === 0) {
+      return { periodKeys: [], categories: [], monthlyData: [], categoryColors: {} };
+    }
+
+    const startDate = startOfDay(config.startDate);
+    const endDate = startOfDay(config.endDate);
+    const filterStart = dateFrom ? startOfDay(dateFrom) : null;
+    const filterEnd = dateTo ? startOfDay(dateTo) : null;
+
+    const dates = eachDayOfInterval({ start: startDate, end: endDate });
+    const periodMap = new Map<string, Map<string, number>>();
+    const categoryColors: Record<string, string> = {};
+
+    for (const date of dates) {
+      const t = date.getTime();
+      if (filterStart && t < filterStart.getTime()) continue;
+      if (filterEnd && t > filterEnd.getTime()) continue;
+
+      const periodKey = getPeriodKey(date, granularity);
+      if (!periodMap.has(periodKey)) {
+        periodMap.set(periodKey, new Map());
+      }
+      const periodData = periodMap.get(periodKey)!;
+
+      for (const sub of flat) {
+        const amount = this.applySubscriptionToDate(sub, date);
+        if (amount !== 0 && sub.type === 'debit') {
+          const debitAmount = Math.abs(amount);
+          const label = sub.name;
+          const current = periodData.get(label) ?? 0;
+          periodData.set(label, current + debitAmount);
+          if (!categoryColors[label]) {
+            categoryColors[label] = sub.color || '#808080';
+          }
+        }
+      }
+    }
+
+    const periodKeys = [...periodMap.keys()].sort();
+    const categories = Array.from(
+      new Set(flat.map((s) => s.name))
+    );
+    const monthlyData = categories.map((cat) =>
+      periodKeys.map((pk) => periodMap.get(pk)?.get(cat) ?? 0)
+    );
+
+    return {
+      periodKeys,
+      categories,
+      monthlyData,
+      categoryColors,
     };
   }
 }

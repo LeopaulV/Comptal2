@@ -5,9 +5,12 @@ import {
   faSliders,
   faBoxesStacked,
   faClipboardList,
+  faArrowTrendDown,
+  faBookOpen,
+  faWarehouse,
 } from '@fortawesome/free-solid-svg-icons';
 
-export type InvoicingTab = 'gestion' | 'parametres' | 'postes';
+export type InvoicingTab = 'gestion' | 'parametres' | 'postes' | 'charges' | 'stock' | 'registre';
 
 interface InvoicingMenuProps {
   activeTab: InvoicingTab;
@@ -20,6 +23,9 @@ export const InvoicingMenu: React.FC<InvoicingMenuProps> = ({ activeTab, onChang
     { id: 'gestion', icon: faClipboardList, label: t('invoicing.menu.gestion') },
     { id: 'parametres', icon: faSliders, label: t('invoicing.menu.settings') },
     { id: 'postes', icon: faBoxesStacked, label: t('invoicing.menu.postes') },
+    { id: 'charges', icon: faArrowTrendDown, label: t('invoicing.menu.charges') },
+    { id: 'stock', icon: faWarehouse, label: t('invoicing.menu.stock') },
+    { id: 'registre', icon: faBookOpen, label: t('invoicing.menu.registre') },
   ];
 
   return (

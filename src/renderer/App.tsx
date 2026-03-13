@@ -10,6 +10,7 @@ import FinanceGlobal from './pages/FinanceGlobal/FinanceGlobal';
 import Parametre from './pages/Parametre/Parametre';
 import ProjectManagement from './pages/ProjectManagement/ProjectManagement';
 import Invoicing from './pages/Invoicing/Invoicing';
+import Association from './pages/Association/Association';
 import GuidedTour from './components/Onboarding/GuidedTour';
 import './styles/guided-tour.css';
 
@@ -25,6 +26,7 @@ const App: React.FC = () => {
           <Route path="/finance-global" element={<FinanceGlobal />} />
           <Route path="/project-management" element={<ProjectManagement />} />
           <Route path="/invoicing" element={<Invoicing />} />
+          <Route path="/association" element={<Association />} />
           <Route path="/parametre" element={<Parametre />} />
         </Routes>
         <GuidedTour />

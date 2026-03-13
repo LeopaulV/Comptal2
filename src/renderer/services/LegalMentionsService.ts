@@ -198,9 +198,15 @@ export class LegalMentionsService {
 
     try {
       const content = await FileService.readFile(MENTIONS_PATH);
-      const parsed: MentionLegale[] = JSON.parse(content);
-      this.mentionsCache = parsed;
-      return parsed;
+      const parsed = JSON.parse(content);
+      // Sécurité : si le JSON n'est pas un tableau (ex: '{}' sur profil neuf), utiliser les mentions prédéfinies
+      if (!Array.isArray(parsed)) {
+        console.warn('[LegalMentionsService] Contenu invalide (non-tableau), utilisation des mentions prédéfinies');
+        this.mentionsCache = this.getPredefinedMentions();
+        return this.mentionsCache;
+      }
+      this.mentionsCache = parsed as MentionLegale[];
+      return this.mentionsCache;
     } catch (error) {
       // Si le fichier n'existe pas, retourner les mentions prédéfinies
       console.log('[LegalMentionsService] Fichier non trouvé, utilisation des mentions prédéfinies');

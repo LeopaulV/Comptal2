@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faCopy, faCog, faChevronDown, faChevronRight } from '@fortawesome/free-solid-svg-icons';
-import { Subscription, Periodicity, RateDefinition } from '../../types/ProjectManagement';
+import { Subscription, Periodicity, RateDefinition, FiscalCategory, FISCAL_CATEGORIES } from '../../types/ProjectManagement';
 import { CategoriesConfig } from '../../types/Category';
 import { ConfigService } from '../../services/ConfigService';
 import { format } from 'date-fns';
@@ -428,6 +428,21 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
     onSubscriptionsChange(updateSubscriptionInTree(subscriptions, id, s => ({ ...s, color: color || '#0ea5e9' })));
   }, [subscriptions, onSubscriptionsChange]);
 
+  const handleFiscalCategoryChange = useCallback((id: string, fiscalCategory: string) => {
+    onSubscriptionsChange(updateSubscriptionInTree(subscriptions, id, s => ({
+      ...s,
+      fiscalCategory: (fiscalCategory || undefined) as FiscalCategory | undefined,
+    })));
+  }, [subscriptions, onSubscriptionsChange]);
+
+  const handleTvaRateChange = useCallback((id: string, tvaRate: string) => {
+    const value = parseFloat(tvaRate);
+    onSubscriptionsChange(updateSubscriptionInTree(subscriptions, id, s => ({
+      ...s,
+      tvaRate: isNaN(value) ? undefined : value,
+    })));
+  }, [subscriptions, onSubscriptionsChange]);
+
   const toggleAdvancedSettings = useCallback((subscriptionId: string) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev);
@@ -772,6 +787,23 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
           </td>
 
           <td className="px-4 py-2 border border-gray-300 dark:border-gray-600">
+            {!isGroup && (
+              <select
+                value={subscription.fiscalCategory || ''}
+                onChange={(e) => handleFiscalCategoryChange(subscription.id, e.target.value)}
+                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs"
+              >
+                <option value="">{t('invoicing.charges.selectFiscalCategory', '—')}</option>
+                {FISCAL_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>
+                    {t(`invoicing.charges.categories.${cat}`, cat)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </td>
+
+          <td className="px-4 py-2 border border-gray-300 dark:border-gray-600">
             <div className="flex gap-2 justify-center relative">
               {isGroup && (
                 <>
@@ -863,7 +895,7 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
         {/* Options avancées (seulement pour les feuilles pour l'instant) */}
         {!isGroup && expandedRows.has(subscription.id) && (
           <tr>
-            <td colSpan={9} className="px-4 py-4 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30" style={{ paddingLeft: `${(level * 20) + 16}px` }}>
+            <td colSpan={10} className="px-4 py-4 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30" style={{ paddingLeft: `${(level * 20) + 16}px` }}>
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   {t('projectManagement.subscriptionTable.advancedOptions', 'Options avancées')}
@@ -875,6 +907,26 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
                   onRatesChange={(rates) => handleRatesChange(subscription.id, rates)}
                   defaultPeriodicity={subscription.periodicity}
                 />
+
+                {/* Taux TVA déductible */}
+                <div className="flex items-center gap-3 mt-3">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                    {t('invoicing.postes.tva', 'TVA (%)')}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={subscription.tvaRate ?? ''}
+                    onChange={(e) => handleTvaRateChange(subscription.id, e.target.value)}
+                    placeholder="0"
+                    className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('invoicing.charges.tva.deductible', 'TVA déductible')}
+                  </span>
+                </div>
               </div>
             </td>
           </tr>
@@ -980,6 +1032,9 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
               <th className="px-4 py-2 text-left border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {t('projectManagement.subscriptionTable.color', 'Couleur')}
               </th>
+              <th className="px-4 py-2 text-left border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {t('invoicing.charges.fiscalCategory', 'Nature fiscale')}
+              </th>
               <th className="px-4 py-2 text-center border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {t('projectManagement.subscriptionTable.actions', 'Actions')}
               </th>
@@ -988,7 +1043,7 @@ const SubscriptionTable: React.FC<SubscriptionTableProps> = ({
           <tbody>
             {subscriptions.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
+                <td colSpan={10} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600">
                   {t('projectManagement.subscriptionTable.noSubscriptions', 'Aucun abonnement. Cliquez sur "Ajouter" pour en créer un.')}
                 </td>
               </tr>

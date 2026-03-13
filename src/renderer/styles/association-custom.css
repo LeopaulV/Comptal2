@@ -1,0 +1,1378 @@
+/* ============================================
+   Page Association – Charte visuelle Comptal2
+   Réutilise les variables de invoicing-custom.css (chargé avant).
+   ============================================ */
+
+/* Layout principal */
+.association-page {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+.association-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.association-header {
+  flex-shrink: 0;
+}
+
+.association-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--invoicing-gray-900);
+  margin-bottom: 4px;
+}
+
+.dark .association-title,
+html.dark .association-title {
+  color: var(--invoicing-gray-700);
+}
+
+.association-main {
+  flex: 1;
+}
+
+.association-panel {
+  width: 100%;
+}
+
+/* Menu latéral – aligné sur invoicing-menu */
+.association-menu {
+  width: 240px;
+  background: var(--invoicing-gray-50);
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 12px;
+  padding: 16px;
+  height: fit-content;
+  box-shadow: var(--shadow-md);
+}
+
+.dark .association-menu,
+html.dark .association-menu {
+  background: var(--invoicing-gray-200);
+  border-color: var(--invoicing-gray-400);
+}
+
+.association-menu-header {
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--invoicing-gray-900);
+}
+
+.dark .association-menu-header,
+html.dark .association-menu-header {
+  color: var(--invoicing-gray-700);
+}
+
+.association-menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.association-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--invoicing-gray-100);
+  color: var(--invoicing-gray-700);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.dark .association-menu-item,
+html.dark .association-menu-item {
+  background: var(--invoicing-gray-300);
+  color: var(--invoicing-gray-600);
+}
+
+.association-menu-item:hover {
+  background: var(--invoicing-gray-200);
+  color: var(--invoicing-gray-900);
+  transform: translateX(2px);
+}
+
+.dark .association-menu-item:hover,
+html.dark .association-menu-item:hover {
+  background: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-800);
+}
+
+.association-menu-item.active {
+  background: var(--invoicing-primary-lightest);
+  color: var(--invoicing-primary);
+  font-weight: 500;
+}
+
+.dark .association-menu-item.active,
+html.dark .association-menu-item.active {
+  background: var(--invoicing-primary-lightest);
+  color: var(--invoicing-primary-lighter);
+}
+
+/* Cartes et en-têtes – cohérents avec invoicing-card */
+.association-card {
+  background: var(--invoicing-gray-50);
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.dark .association-card,
+html.dark .association-card {
+  background: var(--invoicing-gray-200);
+  border-color: var(--invoicing-gray-400);
+}
+
+/* Boutons secondaires dans les cartes Association – bleu foncé pour la lisibilité (sauf Supprimer) */
+.association-card .secondary:not(.danger),
+.association-card .invoicing-list-item-actions .secondary:not(.danger) {
+  background: var(--invoicing-primary);
+  color: #ffffff;
+}
+
+.dark .association-card .secondary:not(.danger),
+.dark .association-card .invoicing-list-item-actions .secondary:not(.danger),
+html.dark .association-card .secondary:not(.danger),
+html.dark .association-card .invoicing-list-item-actions .secondary:not(.danger) {
+  background: var(--invoicing-primary);
+  color: #ffffff;
+}
+
+.association-card .secondary:hover:not(.danger),
+.association-card .invoicing-list-item-actions .secondary:hover:not(.danger) {
+  background: var(--invoicing-primary-light);
+  color: #ffffff;
+}
+
+.dark .association-card .secondary:hover:not(.danger),
+.dark .association-card .invoicing-list-item-actions .secondary:hover:not(.danger),
+html.dark .association-card .secondary:hover:not(.danger),
+html.dark .association-card .invoicing-list-item-actions .secondary:hover:not(.danger) {
+  background: var(--invoicing-primary-light);
+  color: #ffffff;
+}
+
+.association-card .secondary.danger,
+.association-card .invoicing-list-item-actions .secondary.danger {
+  background: var(--invoicing-gray-200);
+  color: var(--invoicing-danger);
+}
+
+.dark .association-card .secondary.danger,
+.dark .association-card .invoicing-list-item-actions .secondary.danger,
+html.dark .association-card .secondary.danger,
+html.dark .association-card .invoicing-list-item-actions .secondary.danger {
+  background: var(--invoicing-gray-400);
+  color: var(--invoicing-danger);
+}
+
+.association-card .secondary.danger:hover,
+.association-card .invoicing-list-item-actions .secondary.danger:hover {
+  background: var(--invoicing-gray-300);
+  color: var(--invoicing-danger);
+}
+
+.dark .association-card .secondary.danger:hover,
+.dark .association-card .invoicing-list-item-actions .secondary.danger:hover,
+html.dark .association-card .secondary.danger:hover,
+html.dark .association-card .invoicing-list-item-actions .secondary.danger:hover {
+  background: var(--invoicing-gray-500);
+  color: var(--invoicing-danger);
+}
+
+.association-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.association-header-row h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--invoicing-gray-900);
+}
+
+.dark .association-header-row h2,
+html.dark .association-header-row h2 {
+  color: var(--invoicing-gray-700);
+}
+
+.association-empty {
+  color: var(--invoicing-gray-500);
+  font-size: 0.9rem;
+}
+
+/* Configuration association – split view */
+.association-config-split-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.association-config-form h2,
+.association-config-preview h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--invoicing-gray-900);
+}
+
+.dark .association-config-form h2,
+.dark .association-config-preview h3,
+html.dark .association-config-form h2,
+html.dark .association-config-preview h3 {
+  color: var(--invoicing-gray-700);
+}
+
+.association-config-placeholder {
+  color: var(--invoicing-gray-500);
+  font-size: 0.875rem;
+}
+
+/* Reçu fiscal – aperçu */
+.recu-fiscal-preview {
+  background: var(--invoicing-gray-50);
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.dark .recu-fiscal-preview,
+html.dark .recu-fiscal-preview {
+  background: var(--invoicing-gray-200);
+  border-color: var(--invoicing-gray-400);
+}
+
+.recu-fiscal-preview-header {
+  margin-bottom: 16px;
+}
+
+.recu-fiscal-preview-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--invoicing-gray-900);
+}
+
+.recu-fiscal-preview-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--invoicing-gray-500);
+}
+
+.recu-fiscal-preview-content {
+  font-size: 0.875rem;
+  color: var(--invoicing-gray-700);
+}
+
+.recu-fiscal-preview-block {
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--invoicing-gray-200);
+}
+
+.recu-fiscal-preview-block:last-child {
+  border-bottom: none;
+}
+
+.recu-fiscal-preview-don {
+  background: var(--invoicing-primary-lightest);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.recu-fiscal-preview-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--invoicing-gray-800);
+}
+
+.recu-fiscal-preview-placeholder {
+  padding: 40px;
+  text-align: center;
+  color: var(--invoicing-gray-500);
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .association-page {
+    flex-direction: column;
+  }
+
+  .association-menu {
+    width: 100%;
+  }
+
+  .association-config-split-view {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Bouton Enregistrer – configuration association (charte CTA) */
+.association-form-actions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--invoicing-gray-200);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dark .association-form-actions,
+html.dark .association-form-actions {
+  border-top-color: var(--invoicing-gray-400);
+}
+
+.association-save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  min-height: 44px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.association-save-btn:focus-visible {
+  outline: 2px solid var(--invoicing-primary);
+  outline-offset: 2px;
+}
+
+.association-form-status {
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.association-form-status.success {
+  color: var(--invoicing-primary);
+  background: var(--invoicing-primary-lightest);
+}
+
+.dark .association-form-status.success,
+html.dark .association-form-status.success {
+  color: var(--invoicing-primary-lighter);
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.association-form-status.error {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.dark .association-form-status.error,
+html.dark .association-form-status.error {
+  color: #fca5a5;
+  background: rgba(185, 28, 28, 0.2);
+}
+
+/* ============================================
+   CAROUSEL ASSOCIATION - OPTIMISATION ESPACE GRAPHIQUES
+   Overrides scopés pour ne pas impacter le carousel Entreprise.
+   Limite la hauteur et permet aux deux graphiques de la page Répartition de rester visibles.
+   ============================================ */
+.association-page .invoicing-carousel-container {
+  max-height: min(72vh, 580px);
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.association-page .invoicing-carousel-viewport {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Carousel Association : 2 pages (vs 3 pour Invoicing) – largeur track et pages corrigées */
+.association-page .invoicing-carousel-track {
+  width: 200%;
+  height: 100%;
+  min-height: 0;
+}
+
+.association-page .invoicing-carousel-page {
+  width: 50%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.association-page .invoicing-carousel-page .invoicing-page-content {
+  min-height: 0;
+  flex: 1;
+}
+
+.association-page .invoicing-graph-section {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.association-page .invoicing-graph-section-grid {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.association-page .invoicing-graph-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.association-page .invoicing-graph-card-content {
+  flex: 1;
+  min-height: 200px;
+  height: auto;
+  position: relative;
+  width: 100%;
+}
+
+/* Champs date (période PDF, etc.) – mode clair/sombre */
+.association-input-date {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-gray-50);
+  font-size: 0.875rem;
+  color: var(--invoicing-gray-900);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.association-input-date:focus {
+  outline: none;
+  border-color: var(--invoicing-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.dark .association-input-date,
+html.dark .association-input-date {
+  background: var(--invoicing-gray-300);
+  border-color: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-900);
+}
+
+.dark .association-input-date:focus,
+html.dark .association-input-date:focus {
+  border-color: var(--invoicing-primary-light);
+}
+
+/* ============================================
+   REGISTRE DES REÇUS FISCAUX
+   ============================================ */
+.association-registre-panel {
+  background: var(--invoicing-gray-50);
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .association-registre-panel,
+html.dark .association-registre-panel {
+  background: var(--invoicing-gray-200);
+  border-color: var(--invoicing-gray-400);
+}
+
+.association-registre-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.association-registre-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--invoicing-gray-900);
+  margin: 0 0 4px 0;
+}
+
+.dark .association-registre-title,
+html.dark .association-registre-title {
+  color: var(--invoicing-gray-700);
+}
+
+.association-registre-subtitle {
+  font-size: 0.85rem;
+  color: var(--invoicing-gray-600);
+  margin: 0;
+}
+
+.association-registre-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.association-registre-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-gray-50);
+  color: var(--invoicing-gray-700);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.association-registre-refresh:hover {
+  background: var(--invoicing-gray-100);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Onglets Reçus / Bilans */
+.association-registre-type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.association-registre-type-tab {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-gray-50);
+  color: var(--invoicing-gray-700);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dark .association-registre-type-tab,
+html.dark .association-registre-type-tab {
+  background: var(--invoicing-gray-300);
+  border-color: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-800);
+}
+
+.association-registre-type-tab:hover {
+  background: var(--invoicing-gray-100);
+}
+
+.dark .association-registre-type-tab:hover,
+html.dark .association-registre-type-tab:hover {
+  background: var(--invoicing-gray-400);
+}
+
+.association-registre-type-tab.active {
+  background: var(--invoicing-primary);
+  border-color: var(--invoicing-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Stats */
+.association-registre-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.association-registre-stat {
+  flex: 1;
+  background: #fff;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .association-registre-stat,
+html.dark .association-registre-stat {
+  background: var(--invoicing-gray-300);
+  border-color: var(--invoicing-gray-500);
+}
+
+.association-registre-stat--annule {
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+
+.dark .association-registre-stat--annule,
+html.dark .association-registre-stat--annule {
+  background: rgba(185, 28, 28, 0.1);
+  border-color: rgba(185, 28, 28, 0.3);
+}
+
+.association-registre-stat-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--invoicing-primary);
+  margin-bottom: 4px;
+}
+
+.association-registre-stat--annule .association-registre-stat-value {
+  color: #ef4444;
+}
+
+.association-registre-stat-label {
+  font-size: 0.8rem;
+  color: var(--invoicing-gray-600);
+}
+
+.dark .association-registre-stat-label,
+html.dark .association-registre-stat-label {
+  color: var(--invoicing-gray-500);
+}
+
+/* Filtres */
+.association-registre-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.association-registre-filter-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-gray-50);
+  color: var(--invoicing-gray-700);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dark .association-registre-filter-btn,
+html.dark .association-registre-filter-btn {
+  background: var(--invoicing-gray-300);
+  border-color: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-800);
+}
+
+.association-registre-filter-btn:hover {
+  background: var(--invoicing-gray-100);
+}
+
+.dark .association-registre-filter-btn:hover,
+html.dark .association-registre-filter-btn:hover {
+  background: var(--invoicing-gray-400);
+}
+
+.association-registre-filter-btn.active {
+  background: var(--invoicing-primary);
+  border-color: var(--invoicing-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Table */
+.association-registre-table-wrapper {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--invoicing-gray-200);
+}
+
+.dark .association-registre-table-wrapper,
+html.dark .association-registre-table-wrapper {
+  border-color: var(--invoicing-gray-400);
+}
+
+.association-registre-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.association-registre-table th {
+  background: var(--invoicing-primary);
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.association-registre-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--invoicing-gray-200);
+  color: var(--invoicing-gray-800);
+  vertical-align: middle;
+}
+
+.dark .association-registre-table td,
+html.dark .association-registre-table td {
+  color: var(--invoicing-gray-700);
+  border-color: var(--invoicing-gray-400);
+}
+
+.association-registre-table tr:last-child td {
+  border-bottom: none;
+}
+
+.association-registre-table tbody tr:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.dark .association-registre-table tbody tr:nth-child(odd),
+html.dark .association-registre-table tbody tr:nth-child(odd) {
+  background: var(--invoicing-gray-200);
+}
+
+.association-registre-row--annule {
+  opacity: 0.55;
+}
+
+.association-registre-row--annule td {
+  text-decoration: line-through;
+}
+
+.association-registre-numero-badge {
+  background: var(--invoicing-primary);
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.association-registre-montant {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Badges statut */
+.association-registre-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.association-registre-badge--actif {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.dark .association-registre-badge--actif,
+html.dark .association-registre-badge--actif {
+  background: rgba(22, 101, 52, 0.2);
+  color: #4ade80;
+}
+
+.association-registre-badge--annule {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.dark .association-registre-badge--annule,
+html.dark .association-registre-badge--annule {
+  background: rgba(153, 27, 27, 0.2);
+  color: #fca5a5;
+}
+
+.association-registre-badge-date {
+  font-weight: 400;
+}
+
+/* Actions */
+.association-registre-row-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.association-registre-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.association-registre-btn--ouvrir {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.dark .association-registre-btn--ouvrir,
+html.dark .association-registre-btn--ouvrir {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.association-registre-btn--ouvrir:hover {
+  background: #bfdbfe;
+}
+
+.dark .association-registre-btn--ouvrir:hover,
+html.dark .association-registre-btn--ouvrir:hover {
+  background: rgba(59, 130, 246, 0.35);
+}
+
+.association-registre-btn--annuler {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.dark .association-registre-btn--annuler,
+html.dark .association-registre-btn--annuler {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--invoicing-warning);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.association-registre-btn--annuler:hover {
+  background: #fde68a;
+}
+
+.dark .association-registre-btn--annuler:hover,
+html.dark .association-registre-btn--annuler:hover {
+  background: rgba(245, 158, 11, 0.35);
+}
+
+.association-registre-btn--supprimer {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.dark .association-registre-btn--supprimer,
+html.dark .association-registre-btn--supprimer {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--invoicing-danger);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.association-registre-btn--supprimer:hover {
+  background: #fca5a5;
+}
+
+.dark .association-registre-btn--supprimer:hover,
+html.dark .association-registre-btn--supprimer:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+/* Empty */
+.association-registre-empty {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--invoicing-gray-500);
+}
+
+.dark .association-registre-empty,
+html.dark .association-registre-empty {
+  color: var(--invoicing-gray-600);
+}
+
+.association-registre-empty-icon {
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+.association-registre-loading {
+  text-align: center;
+  padding: 32px;
+  color: var(--invoicing-gray-500);
+}
+
+.dark .association-registre-loading,
+html.dark .association-registre-loading {
+  color: var(--invoicing-gray-600);
+}
+
+/* Footer */
+.association-registre-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--invoicing-gray-200);
+  font-size: 0.8rem;
+  color: var(--invoicing-gray-500);
+  font-style: italic;
+}
+
+.dark .association-registre-footer,
+html.dark .association-registre-footer {
+  border-top-color: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-600);
+}
+
+/* ============================================
+   Dons en nature – Modal d'ajout
+   ============================================ */
+
+.don-nature-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.don-nature-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dark .don-nature-modal,
+html.dark .don-nature-modal {
+  background: var(--invoicing-gray-200);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.don-nature-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--invoicing-gray-200);
+  gap: 12px;
+}
+
+.dark .don-nature-modal-header,
+html.dark .don-nature-modal-header {
+  border-bottom-color: var(--invoicing-gray-400);
+}
+
+.don-nature-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--invoicing-gray-900);
+  margin: 0 0 2px;
+}
+
+.dark .don-nature-modal-title,
+html.dark .don-nature-modal-title {
+  color: var(--invoicing-gray-700);
+}
+
+.don-nature-modal-subtitle {
+  font-size: 0.85rem;
+  color: var(--invoicing-gray-500);
+  margin: 0;
+}
+
+.dark .don-nature-modal-subtitle,
+html.dark .don-nature-modal-subtitle {
+  color: var(--invoicing-gray-600);
+}
+
+.don-nature-close {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--invoicing-gray-400);
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.don-nature-close:hover {
+  background: var(--invoicing-gray-100);
+  color: var(--invoicing-gray-700);
+}
+
+.dark .don-nature-close:hover,
+html.dark .don-nature-close:hover {
+  background: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-800);
+}
+
+.don-nature-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Sélecteur de type */
+.don-nature-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.don-nature-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 2px solid var(--invoicing-gray-200);
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dark .don-nature-type-card,
+html.dark .don-nature-type-card {
+  background: var(--invoicing-gray-300);
+  border-color: var(--invoicing-gray-400);
+}
+
+.don-nature-type-card:hover {
+  border-color: var(--invoicing-primary);
+  background: var(--invoicing-primary-50, #eff6ff);
+}
+
+.dark .don-nature-type-card:hover,
+html.dark .don-nature-type-card:hover {
+  background: var(--invoicing-primary-lightest);
+  border-color: var(--invoicing-primary-light);
+}
+
+.don-nature-type-card.active {
+  border-color: var(--invoicing-primary);
+  background: var(--invoicing-primary-50, #eff6ff);
+  box-shadow: 0 0 0 1px var(--invoicing-primary);
+}
+
+.dark .don-nature-type-card.active,
+html.dark .don-nature-type-card.active {
+  background: var(--invoicing-primary-lightest);
+  border-color: var(--invoicing-primary-light);
+  box-shadow: 0 0 0 1px var(--invoicing-primary-light);
+}
+
+.don-nature-type-icon {
+  color: var(--invoicing-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.don-nature-type-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--invoicing-gray-800);
+  line-height: 1.2;
+}
+
+.dark .don-nature-type-label,
+html.dark .don-nature-type-label {
+  color: var(--invoicing-gray-700);
+}
+
+.don-nature-type-hint {
+  font-size: 0.72rem;
+  color: var(--invoicing-gray-500);
+  line-height: 1.3;
+}
+
+.dark .don-nature-type-hint,
+html.dark .don-nature-type-hint {
+  color: var(--invoicing-gray-600);
+}
+
+.don-nature-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.don-nature-form-grid label {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.dark .don-nature-form-grid label,
+html.dark .don-nature-form-grid label {
+  color: var(--invoicing-gray-700);
+}
+
+.don-nature-form-grid input,
+.don-nature-form-grid select,
+.don-nature-form-grid textarea {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-gray-50);
+  color: var(--invoicing-gray-900);
+}
+
+.dark .don-nature-form-grid input,
+.dark .don-nature-form-grid select,
+.dark .don-nature-form-grid textarea,
+html.dark .don-nature-form-grid input,
+html.dark .don-nature-form-grid select,
+html.dark .don-nature-form-grid textarea {
+  border-color: var(--invoicing-gray-400);
+  background: var(--invoicing-gray-300);
+  color: var(--invoicing-gray-900);
+}
+
+.don-nature-form-grid textarea {
+  width: 100%;
+}
+
+.don-nature-info-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #1e40af;
+}
+
+.dark .don-nature-info-box,
+html.dark .don-nature-info-box {
+  background: var(--invoicing-primary-lightest);
+  border-color: var(--invoicing-primary-lighter);
+  color: var(--invoicing-primary-lighter);
+}
+
+.don-nature-info-box--mecenat {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.dark .don-nature-info-box--mecenat,
+html.dark .don-nature-info-box--mecenat {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--invoicing-success);
+}
+
+.don-nature-info-box strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.don-nature-info-box p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.don-nature-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.dark .don-nature-error,
+html.dark .don-nature-error {
+  background: rgba(185, 28, 28, 0.15);
+  border-color: rgba(185, 28, 28, 0.4);
+  color: var(--invoicing-danger);
+}
+
+.don-nature-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--invoicing-gray-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dark .don-nature-modal-footer,
+html.dark .don-nature-modal-footer {
+  border-top-color: var(--invoicing-gray-400);
+}
+
+/* ============================================
+   Dons – Affichage dans les listes
+   ============================================ */
+
+.don-section-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--invoicing-gray-400);
+  padding: 8px 16px 4px;
+}
+
+.dark .don-section-label,
+html.dark .don-section-label {
+  color: var(--invoicing-gray-500);
+}
+
+.don-manuel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.don-nature-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.don-nature-badge[data-nature="nature"] {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.don-nature-badge[data-nature="mecenat_competences"] {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.don-nature-badge[data-nature="numeraire"] {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.don-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: none;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--invoicing-gray-400);
+  transition: background 0.1s, color 0.1s;
+}
+
+.dark .don-action-btn,
+html.dark .don-action-btn {
+  border-color: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-500);
+}
+
+.don-action-btn:hover {
+  background: var(--invoicing-gray-100);
+  color: var(--invoicing-gray-700);
+}
+
+.dark .don-action-btn:hover,
+html.dark .don-action-btn:hover {
+  background: var(--invoicing-gray-400);
+  color: var(--invoicing-gray-800);
+}
+
+.don-action-btn--delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.dark .don-action-btn--delete:hover,
+html.dark .don-action-btn--delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--invoicing-danger);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.don-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Section dons anonymes */
+.don-anonyme-section {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.don-anonyme-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--invoicing-gray-800);
+  margin: 0 0 2px;
+}
+
+.dark .don-anonyme-title,
+html.dark .don-anonyme-title {
+  color: var(--invoicing-gray-700);
+}
+
+.don-anonyme-subtitle {
+  font-size: 0.82rem;
+  color: var(--invoicing-gray-500);
+  margin: 0;
+}
+
+.dark .don-anonyme-subtitle,
+html.dark .don-anonyme-subtitle {
+  color: var(--invoicing-gray-600);
+}
+
+.don-anonyme-total {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--invoicing-primary);
+  background: var(--invoicing-primary-50, #eff6ff);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.dark .don-anonyme-total,
+html.dark .don-anonyme-total {
+  background: var(--invoicing-primary-lightest);
+  color: var(--invoicing-primary-lighter);
+}

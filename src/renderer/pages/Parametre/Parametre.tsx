@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Palette, Folder, Database, Info } from 'lucide-react';
+import { Settings, Palette, Folder, Database, Info, Trash2, FileSpreadsheet, UserCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/Common';
 import AccountManager from '../../components/Parametre/AccountManager';
 import CategoryManager from '../../components/Parametre/CategoryManager';
+import ProfileManager from '../../components/Parametre/ProfileManager';
 import { ConfigService } from '../../services/ConfigService';
 import { EditionService } from '../../services/EditionService';
 import { DataService } from '../../services/DataService';
+import { FileService } from '../../services/FileService';
 import { useLanguage } from '../../hooks/useLanguage';
 import { OnboardingService } from '../../services/OnboardingService';
 import { MenuVisibility, DEFAULT_MENU_VISIBILITY } from '../../types/Settings';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
-type ParametreTab = 'general' | 'accounts' | 'categories' | 'data' | 'about';
+type ParametreTab = 'general' | 'profiles' | 'accounts' | 'categories' | 'data' | 'about';
 
 const Parametre: React.FC = () => {
   const { t } = useTranslation();
@@ -26,6 +28,8 @@ const Parametre: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [menuVisibility, setMenuVisibility] = useState<MenuVisibility>(DEFAULT_MENU_VISIBILITY);
+  const [dataFiles, setDataFiles] = useState<string[]>([]);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
 
   // Charger le chemin de données et la visibilité du menu au montage
   useEffect(() => {
@@ -55,6 +59,21 @@ const Parametre: React.FC = () => {
     };
     checkAndOpenAccounts();
   }, []); // Ne s'exécute qu'une fois au montage
+
+  // Charger la liste des fichiers du dossier data quand l'onglet Données est actif
+  useEffect(() => {
+    if (activeTab !== 'data') return;
+    const loadDataFiles = async () => {
+      try {
+        const files = await FileService.readDirectory(dataFolderPath);
+        setDataFiles(files.sort());
+      } catch (error: any) {
+        console.error('Erreur chargement fichiers data:', error);
+        setDataFiles([]);
+      }
+    };
+    loadDataFiles();
+  }, [activeTab, dataFolderPath]);
 
   // Handler pour mettre à jour la visibilité du menu
   const handleMenuVisibilityChange = async (key: keyof MenuVisibility, value: boolean) => {
@@ -114,7 +133,7 @@ const Parametre: React.FC = () => {
 
       // Créer l'objet de configuration complet
       const config = {
-        version: '1.0.0',
+        version: '1.1.0',
         exportDate: new Date().toISOString(),
         accounts,
         categories,
@@ -255,6 +274,7 @@ const Parametre: React.FC = () => {
 
   const tabs = [
     { id: 'general' as const, label: t('settings.general'), icon: Settings },
+    { id: 'profiles' as const, label: t('settings.profiles'), icon: UserCircle },
     { id: 'accounts' as const, label: t('settings.accounts'), icon: Database },
     { id: 'categories' as const, label: t('settings.categories'), icon: Palette },
     { id: 'data' as const, label: t('settings.data'), icon: Folder },
@@ -411,11 +431,39 @@ const Parametre: React.FC = () => {
                     {t('navigation.projectManagement')}
                   </label>
                 </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-invoicing"
+                    checked={menuVisibility.invoicing}
+                    onChange={(e) => handleMenuVisibilityChange('invoicing', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-invoicing" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.invoicing')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-association"
+                    checked={menuVisibility.association}
+                    onChange={(e) => handleMenuVisibilityChange('association', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-association" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.association')}
+                  </label>
+                </div>
               </div>
             </div>
           </div>
         </Card>
       )}
+
+      {activeTab === 'profiles' && <ProfileManager />}
 
       {activeTab === 'accounts' && (
         <Card title={t('settings.accountManagement')} subtitle={t('settings.accountManagementSubtitle')}>
@@ -551,6 +599,65 @@ const Parametre: React.FC = () => {
                                hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {isResetting ? t('settings.resetting') : t('settings.resetApp')}
               </button>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                {t('settings.dataFilesList')}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                {t('settings.dataFilesListDescription')}
+              </p>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 max-h-64 overflow-y-auto">
+                {dataFiles.length === 0 ? (
+                  <p className="p-4 text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.dataFilesEmpty')}
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                    {dataFiles.map((fileName) => {
+                      const isCsv = fileName.toLowerCase().endsWith('.csv');
+                      const fullPath = `${dataFolderPath.replace(/\/$/, '')}/${fileName}`;
+                      return (
+                        <li
+                          key={fileName}
+                          className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                        >
+                          <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 truncate min-w-0">
+                            {isCsv ? (
+                              <FileSpreadsheet className="flex-shrink-0 w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : null}
+                            {fileName}
+                          </span>
+                          {isCsv && (
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(t('settings.dataFileDeleteConfirm', { file: fileName }))) return;
+                                setDeletingFile(fileName);
+                                try {
+                                  await FileService.deleteFile(fullPath);
+                                  setDataFiles((prev) => prev.filter((f) => f !== fileName));
+                                  ConfigService.clearCache();
+                                  await DataService.reload();
+                                } catch (error: any) {
+                                  alert(t('settings.dataFileDeleteError', { error: error.message }));
+                                } finally {
+                                  setDeletingFile(null);
+                                }
+                              }}
+                              disabled={deletingFile === fileName}
+                              className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-50"
+                              title={t('settings.dataFileDelete')}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </Card>

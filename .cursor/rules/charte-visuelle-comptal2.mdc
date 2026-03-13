@@ -1,0 +1,45 @@
+---
+description: Charte visuelle Comptal2 – UI professionnelle et moderne
+globs: "**/*.css, **/*.tsx, **/components/**/*.tsx, **/pages/**/*.tsx"
+alwaysApply: false
+---
+
+# Charte visuelle Comptal2
+
+Lors de toute modification d’interface (CSS, composants React des pages/composants), respecter la charte visuelle du logiciel : **professionnelle, sobre et moderne**, en cohérence avec la page **Édition** et les pages **Entreprise (Invoicing)** / **Association**.
+
+## Principes
+
+- **Couleurs** : utiliser les variables CSS définies dans `invoicing-custom.css` et `edition-custom.css` (`--invoicing-primary`, `--invoicing-gray-*`, `--shadow-*`). Ne pas introduire de couleurs en dur (sauf cas très local).
+- **Thème sombre** : pour chaque bloc concerné, ajouter les sélecteurs `.dark` et `html.dark` avec les variables adaptées.
+- **Ombres** : `--shadow-sm` pour les cartes au repos, `--shadow-md` au survol / pour les contrôles actifs.
+- **Transitions** : `transition: all 0.2s ease` ou `0.25s cubic-bezier(0.4, 0, 0.2, 1)` pour les interactions (boutons, onglets, cartes).
+
+## Boutons
+
+- **Principal (CTA)** : `padding: 12px 20px`, `min-height: 44px`, `border-radius: 8px`, `font-size: 0.95rem`, `font-weight: 500`. Fond `--invoicing-primary`, texte blanc. Au survol : léger `translateY(-2px)` et `box-shadow: var(--shadow-md)`.
+- **Secondaire** : fond `--invoicing-gray-200`, texte `--invoicing-gray-900`, même padding et border-radius. Au survol : fond plus foncé et léger translateY.
+- **Onglets / tabs (ex. carousel)** : inactif = fond `--invoicing-gray-50`, bordure `--invoicing-gray-300`, `border-radius: 8px`, `padding: 10px 20px`, `font-size: 0.875rem`. Actif = fond `--invoicing-primary`, texte blanc, `font-weight: 600`.
+
+## Cartes et conteneurs
+
+- **Cartes de contenu** : `border-radius: 12px` ou `16px`, `padding: 24px` (ou 20px), `border: 1px solid var(--invoicing-gray-200)`, `box-shadow: var(--shadow-sm)`. Fond `--invoicing-gray-50` (clair) / `--invoicing-gray-200` (sombre).
+- **En-têtes de section** : `font-size: 1.25rem`, `font-weight: 600`, marge basse cohérente (ex. 16px).
+
+## Espacements et grilles
+
+- **Gap entre éléments** : 12px, 16px ou 20px selon le niveau de regroupement. Éviter des valeurs arbitraires (ex. 13px, 17px).
+- **Formulaires** : grille `grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`, `gap: 12px`. Labels en `font-size: 0.9rem`, champs avec `padding: 8px 10px`, `border-radius: 8px`.
+
+## Référence
+
+- **Page Édition** : `edition-custom.css`, `.action-button`, `.filter-nav-button`, `.editor-sidebar` — prendre cette page comme référence pour les boutons d’action et les onglets de filtres.
+- **Pages Invoicing / Association** : `invoicing-custom.css` pour le carousel (`.invoicing-carousel-container`, `.invoicing-carousel-tab`), les cartes (`.invoicing-card`), les listes (`.invoicing-list-item`) et les boutons (`.primary`, `.secondary`).
+
+## Fichiers CSS à privilégier
+
+- Variables et composants partagés : `src/renderer/styles/invoicing-custom.css`
+- Spécifique Association : `src/renderer/styles/association-custom.css` (sans redéfinir les variables déjà présentes dans invoicing).
+- Spécifique Édition : `src/renderer/styles/edition-custom.css`
+
+Ne pas dupliquer les blocs `:root` de variables ; réutiliser celles déjà définies dans les fichiers chargés avant.

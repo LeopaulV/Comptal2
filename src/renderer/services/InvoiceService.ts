@@ -168,7 +168,7 @@ export class InvoiceService {
     throw new Error('Export PDF non implémenté');
   }
 
-  private static calculateLineHT(poste: PosteFacture): number {
+  static calculateLineHT(poste: PosteFacture): number {
     if (poste.type === 'materiel') {
       const p = poste as PosteMateriel;
       let total = p.prixUnitaireHT * p.quantite;

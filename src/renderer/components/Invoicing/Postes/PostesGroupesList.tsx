@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PosteGroupe } from '../../../types/Invoice';
-import { PosteService } from '../../../services/PosteService';
+import { usePosteService } from '../../../contexts/PosteServiceContext';
 import { PosteGroupeRow } from './PosteGroupeRow';
 
 interface PostesGroupesListProps {
@@ -10,10 +10,11 @@ interface PostesGroupesListProps {
 
 export const PostesGroupesList: React.FC<PostesGroupesListProps> = ({ onAddGroupe }) => {
   const { t } = useTranslation();
+  const posteService = usePosteService();
   const [groupes, setGroupes] = useState<PosteGroupe[]>([]);
 
   const loadGroupes = async () => {
-    const data = await PosteService.loadPostesGroupes();
+    const data = await posteService.loadPostesGroupes();
     setGroupes(data);
   };
 
@@ -25,7 +26,7 @@ export const PostesGroupesList: React.FC<PostesGroupesListProps> = ({ onAddGroup
   }, []);
 
   const handleDelete = async (id: string) => {
-    await PosteService.deletePosteGroupe(id);
+    await posteService.deletePosteGroupe(id);
     await loadGroupes();
   };
 

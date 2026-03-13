@@ -33,6 +33,7 @@ export interface Emetteur {
     banque?: string;
   };
   regimeTVA: 'franchise' | 'reel_simplifie' | 'reel_normal' | 'mini_reel';
+  regimeFiscal?: 'micro_bic' | 'micro_bnc' | 'reel_simplifie' | 'reel_normal' | 'is';
   mentionFranchiseTVA?: string;
   assurancePro?: {
     compagnie: string;
@@ -95,6 +96,9 @@ export interface PosteMateriel {
   type: 'materiel';
   designation: string;
   reference?: string;
+  numeroArticle?: string;
+  numeroLot?: string;
+  description?: string;
   prixUnitaireHT: number;
   tauxTVA: number;
   quantite: number;
@@ -102,6 +106,12 @@ export interface PosteMateriel {
   remise?: number;
   fraisTransport?: number;
   marge?: number;
+  /** ID de l'article de stock de référence (synchro bidirectionnelle des champs communs) */
+  articleRefId?: string;
+  fournisseur?: string;
+  factureRef?: string;
+  /** Articles de stock liés à ce poste (consommation par utilisation) */
+  articlesLies?: { articleId: string; quantiteParUtilisation: number }[];
 }
 
 export interface PosteTravail {
@@ -115,6 +125,8 @@ export interface PosteTravail {
   tauxTVA: number;
   marge?: number;
   fraisDeplacement?: number;
+  taches?: string[];
+  secteursIds?: string[];
 }
 
 export type PosteFacture = PosteMateriel | PosteTravail;
@@ -140,9 +152,27 @@ export interface Paiement {
   notes?: string;
 }
 
+/** Entrée dans le registre des recettes entreprise (journal persistant) */
+export interface RecetteRegistreEntry {
+  id: string;
+  factureId: string;
+  paiementId: string;
+  date: string;
+  clientName: string;
+  factureNumero: string;
+  nature: string;
+  montantHT: number;
+  tva: number;
+  montantTTC: number;
+  modePaiement: Paiement['modePaiement'];
+  reference: string;
+  transactionId?: string;
+}
+
 export interface DocumentBase {
   id: string;
   numero: string;
+  intituleSecondaire?: string;
   clientId: string;
   dateEmission: Date;
   dateEcheance?: Date;
@@ -163,7 +193,7 @@ export interface DocumentBase {
   conditionsPaiement?: string;
   mentionsLegales?: string;
   notes?: string;
-  statut: 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'expire';
+  statut: 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'expire' | 'envoyee' | 'payee_partiellement' | 'payee' | 'en_retard' | 'annulee';
   createdAt: Date;
   updatedAt: Date;
 }

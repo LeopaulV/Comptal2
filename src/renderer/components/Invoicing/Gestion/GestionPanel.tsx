@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
+import { Loader2 } from 'lucide-react';
 import { Client, Devis, Facture } from '../../../types/Invoice';
 import { ClientService } from '../../../services/ClientService';
 import { InvoiceService } from '../../../services/InvoiceService';
@@ -28,9 +30,11 @@ export const GestionPanel: React.FC<GestionPanelProps> = ({ onDataChange }) => {
   const [isDevisModalOpen, setIsDevisModalOpen] = useState(false);
   const [isDevisEditModalOpen, setIsDevisEditModalOpen] = useState(false);
   const [isFactureModalOpen, setIsFactureModalOpen] = useState(false);
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
+  const [isReloading, setIsReloading] = useState(false);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     try {
       const [loadedClients, loadedDevis, loadedFactures, loadedTransactions] = await Promise.all([
         ClientService.loadClients(),
@@ -43,14 +47,16 @@ export const GestionPanel: React.FC<GestionPanelProps> = ({ onDataChange }) => {
       setFactures(loadedFactures);
       setTransactions(loadedTransactions);
       await onDataChange?.();
+    } catch (error) {
+      console.error('Erreur chargement données GestionPanel:', error);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
-  };
+  }, [onDataChange]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const devisByClient = useMemo(() => {
     const map = new Map<string, Devis[]>();
@@ -123,25 +129,39 @@ export const GestionPanel: React.FC<GestionPanelProps> = ({ onDataChange }) => {
 
   const closeClientModal = async () => {
     setIsClientModalOpen(false);
-    await loadData();
+    await loadData(false);
+    toast.success(t('invoicing.gestion.clientSaved', 'Client enregistré'));
   };
 
   const closeDevisModal = async () => {
     setIsDevisModalOpen(false);
+    const clientIdForExpand = activeClientId;
     setActiveClientId(null);
-    await loadData();
+    await loadData(false);
+    setExpandedClientId(clientIdForExpand);
+    toast.success(t('invoicing.gestion.devisSaved', 'Devis enregistré'));
+    setIsReloading(true);
+    setTimeout(() => window.location.reload(), 400);
   };
 
   const closeDevisEditModal = async () => {
     setIsDevisEditModalOpen(false);
     setActiveDevisToEdit(null);
-    await loadData();
+    await loadData(false);
+    toast.success(t('invoicing.gestion.devisUpdated', 'Devis mis à jour'));
+    setIsReloading(true);
+    setTimeout(() => window.location.reload(), 400);
   };
 
   const closeFactureModal = async () => {
+    const clientIdForExpand = activeDevis?.clientId ?? null;
     setIsFactureModalOpen(false);
     setActiveDevis(null);
-    await loadData();
+    await loadData(false);
+    setExpandedClientId(clientIdForExpand);
+    toast.success(t('invoicing.gestion.factureSaved', 'Facture enregistrée'));
+    setIsReloading(true);
+    setTimeout(() => window.location.reload(), 400);
   };
 
   return (
@@ -172,6 +192,8 @@ export const GestionPanel: React.FC<GestionPanelProps> = ({ onDataChange }) => {
                 onAddFacture={handleAddFacture}
                 onDeleteFacture={handleDeleteFacture}
                 onRefresh={loadData}
+                defaultExpanded={client.id === expandedClientId}
+                onExpanded={() => setExpandedClientId(null)}
               />
             ))}
             {clients.length === 0 && (
@@ -187,6 +209,12 @@ export const GestionPanel: React.FC<GestionPanelProps> = ({ onDataChange }) => {
       <DevisModal isOpen={isDevisModalOpen} clientId={activeClientId} onClose={closeDevisModal} />
       <DevisModal isOpen={isDevisEditModalOpen} devisToEdit={activeDevisToEdit} onClose={closeDevisEditModal} />
       <FactureModal isOpen={isFactureModalOpen} devis={activeDevis} onClose={closeFactureModal} />
+      {isReloading && (
+        <div className="gestion-reload-overlay">
+          <Loader2 className="gestion-reload-spinner" size={48} />
+          <span>{t('invoicing.gestion.loading', 'Chargement...')}</span>
+        </div>
+      )}
     </div>
   );
 };

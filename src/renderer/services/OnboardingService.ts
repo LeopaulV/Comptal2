@@ -48,12 +48,14 @@ export class OnboardingService {
   }
 
   /**
-   * Vérifie si l'utilisateur a importé des données
+   * Vérifie si l'utilisateur a importé des données (utilise le dossier data du profil actif)
    */
   static async hasImportedData(): Promise<boolean> {
     try {
-      const files = await FileService.readDirectory('data');
-      // Vérifier s'il y a au moins un fichier CSV
+      const settings = await ConfigService.loadSettings();
+      const dataDir = settings.dataDirectory || 'data';
+      const files = await FileService.readDirectoryOptional(dataDir);
+      if (files === null) return false;
       return files.some(file => file.endsWith('.csv'));
     } catch (error: any) {
       console.error('[OnboardingService] Erreur lors de la vérification des données:', error);

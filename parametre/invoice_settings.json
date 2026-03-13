@@ -30,18 +30,18 @@
     },
     "regimeTVA": "franchise",
     "mentionFranchiseTVA": "TVA non applicable, art. 293 B du CGI",
-    "createdAt": "2026-01-25T10:00:00.000Z",
-    "updatedAt": "2026-01-25T10:00:00.000Z"
+    "createdAt": "",
+    "updatedAt": ""
   },
   "prefixeDevis": "DEVIS",
   "prefixeFacture": "FAC",
   "formatNumero": "{PREFIX}-{YEAR}-{SEQ:4}",
-  "prochainNumeroDevis": 6,
-  "prochainNumeroFacture": 17,
+  "prochainNumeroDevis": 1,
+  "prochainNumeroFacture": 1,
   "tauxTVADefaut": 20,
   "delaiPaiementDefaut": 30,
   "conditionsPaiementDefaut": "Paiement à 30 jours",
-  "mentionsPenalitesRetard": "Pénalités de retard exigibles en cas de non-paiement",
-  "mentionIndemniteRecouvrement": "Indemnité forfaitaire de recouvrement: 40€ (B2B)",
+  "mentionsPenalitesRetard": "",
+  "mentionIndemniteRecouvrement": "",
   "mentionsParticulieres": ""
 }

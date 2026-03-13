@@ -56,7 +56,7 @@ interface TableCellProps {
   onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
   onCellFocus: (rowIndex: number, colIndex: number) => void;
   onCellBlur: () => void;
-  onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number) => void;
+  onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number, valueOverride?: string) => void;
 }
 
 // Composant TableCell mémorisé
@@ -149,6 +149,7 @@ const TableCell = memo<TableCellProps>(({
   }
 
   const handleCategoryKeyDown = (e: React.KeyboardEvent) => {
+    // Si la liste déroulante est fermée, laisser le gestionnaire parent gérer (navigation entre lignes)
     if (!autocompleteOpen || filteredCategories.length === 0) {
       onKeyDown(e, rowIndex, colIndex);
       return;
@@ -164,10 +165,13 @@ const TableCell = memo<TableCellProps>(({
         setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
         break;
       case 'Enter':
+        e.preventDefault();
         if (selectedIndex >= 0 && selectedIndex < filteredCategories.length) {
-          e.preventDefault();
-          onCellChange(rowIndex, colIndex, filteredCategories[selectedIndex].code);
+          // Mettre à jour la valeur puis valider et passer à la ligne suivante (comportement Excel)
+          const selectedCode = filteredCategories[selectedIndex].code;
+          onCellChange(rowIndex, colIndex, selectedCode);
           setAutocompleteOpen(false);
+          onKeyDown(e, rowIndex, colIndex, selectedCode);
         } else {
           onKeyDown(e, rowIndex, colIndex);
         }
@@ -339,7 +343,7 @@ interface TableRowProps {
   onCellChange: (rowIndex: number, colIndex: number, value: string) => void;
   onCellFocus: (rowIndex: number, colIndex: number) => void;
   onCellBlur: () => void;
-  onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number) => void;
+  onKeyDown: (event: React.KeyboardEvent, rowIndex: number, colIndex: number, valueOverride?: string) => void;
   getRowWithModifications: (row: EditionRow) => EditionRow;
   modifiedRowKeys: Set<string>;
   renderKey?: number; // Clé pour forcer le re-render sans démonter les composants
@@ -373,6 +377,7 @@ const TableRow = memo<TableRowProps>(({
 
   return (
     <tr
+      data-row-index={rowIndex}
       className={`${isModified ? 'modified-row' : ''} ${rowWithModifications.deleted ? 'deleted-row' : ''}`}
       onContextMenu={(e) => onContextMenu(e, rowIndex)}
     >
@@ -1033,10 +1038,11 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     // Appliquer le changement avant de fermer l'édition
     if (editingCell) {
       const header = headersRef.current[editingCell.colIndex];
+      const valueToApply = editingValueRef.current ?? editingValue;
       
       // Validation de la catégorie
       if (header === 'catégorie') {
-        const normalizedValue = editingValue.trim().toUpperCase();
+        const normalizedValue = valueToApply.trim().toUpperCase();
         const cellKey = `${editingCell.rowIndex}-${editingCell.colIndex}`;
         
         // Vérifier si le code existe (sauf si vide ou "X")
@@ -1066,7 +1072,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
         }
       }
       
-      applyCellChange(editingCell.rowIndex, editingCell.colIndex, editingValue);
+      applyCellChange(editingCell.rowIndex, editingCell.colIndex, valueToApply);
     }
     
     // Réinitialiser immédiatement l'état d'édition pour éviter les problèmes de synchronisation
@@ -1080,21 +1086,22 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     }, 100);
   }, [editingCell, editingValue, applyCellChange, categories]);
 
-  const handleKeyDown = useCallback((event: React.KeyboardEvent, rowIndex: number, colIndex: number) => {
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, rowIndex: number, colIndex: number, valueOverride?: string) => {
     const totalRows = rowsRef.current.length;
     const totalCols = headersRef.current.length;
     const input = event.target as HTMLInputElement | HTMLTextAreaElement;
+    const valueToApply = valueOverride !== undefined ? valueOverride : editingValue;
 
     switch (event.key) {
       case 'ArrowUp':
         event.preventDefault();
         // Appliquer le changement avant de se déplacer
         if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-          applyCellChange(rowIndex, colIndex, editingValue);
+          applyCellChange(rowIndex, colIndex, valueToApply);
         }
         if (rowIndex > 0) {
           const targetCell = tableRef.current?.querySelector(
-            `tbody tr:nth-child(${rowIndex}) td:nth-child(${colIndex + 1}) input, tbody tr:nth-child(${rowIndex}) td:nth-child(${colIndex + 1}) textarea`
+            `tbody tr[data-row-index="${rowIndex - 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex - 1}"] td:nth-child(${colIndex + 1}) textarea`
           ) as HTMLInputElement | HTMLTextAreaElement;
           targetCell?.focus();
           targetCell?.select();
@@ -1105,11 +1112,11 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
         event.preventDefault();
         // Appliquer le changement avant de se déplacer
         if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-          applyCellChange(rowIndex, colIndex, editingValue);
+          applyCellChange(rowIndex, colIndex, valueToApply);
         }
         if (rowIndex < totalRows - 1) {
           const targetCell = tableRef.current?.querySelector(
-            `tbody tr:nth-child(${rowIndex + 2}) td:nth-child(${colIndex + 1}) input, tbody tr:nth-child(${rowIndex + 2}) td:nth-child(${colIndex + 1}) textarea`
+            `tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) textarea`
           ) as HTMLInputElement | HTMLTextAreaElement;
           targetCell?.focus();
           targetCell?.select();
@@ -1121,7 +1128,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
           event.preventDefault();
           // Appliquer le changement avant de se déplacer
           if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-            applyCellChange(rowIndex, colIndex, editingValue);
+            applyCellChange(rowIndex, colIndex, valueToApply);
           }
           if (colIndex > 0) {
             const targetCell = tableRef.current?.querySelector(
@@ -1141,7 +1148,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
           event.preventDefault();
           // Appliquer le changement avant de se déplacer
           if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-            applyCellChange(rowIndex, colIndex, editingValue);
+            applyCellChange(rowIndex, colIndex, valueToApply);
           }
           if (colIndex < totalCols - 1) {
             const targetCell = tableRef.current?.querySelector(
@@ -1157,7 +1164,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
         event.preventDefault();
         // Appliquer le changement avant de se déplacer
         if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-          applyCellChange(rowIndex, colIndex, editingValue);
+          applyCellChange(rowIndex, colIndex, valueToApply);
         }
         const direction = event.shiftKey ? -1 : 1;
         let nextColIndex = colIndex + direction;
@@ -1185,13 +1192,14 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
           event.preventDefault();
           // Appliquer le changement avant de se déplacer
           if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-            applyCellChange(rowIndex, colIndex, editingValue);
+            applyCellChange(rowIndex, colIndex, valueToApply);
           }
           input.blur();
           
           if (rowIndex < totalRows - 1) {
+            // Passer à la cellule de la même colonne sur la ligne suivante (comportement Excel)
             const targetCell = tableRef.current?.querySelector(
-              `tbody tr:nth-child(${rowIndex + 2}) td:nth-child(1) input`
+              `tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) textarea`
             ) as HTMLInputElement | HTMLTextAreaElement;
             targetCell?.focus();
             targetCell?.select();

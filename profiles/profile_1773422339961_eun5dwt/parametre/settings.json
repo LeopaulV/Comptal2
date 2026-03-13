@@ -1,0 +1,20 @@
+{
+  "theme": "light",
+  "language": "fr",
+  "currency": "€",
+  "dateFormat": "DD/MM/YYYY",
+  "dataDirectory": "profiles/profile_1773422339961_eun5dwt/data",
+  "autoSave": true,
+  "showBalance": true,
+  "defaultView": "dashboard",
+  "onboardingCompleted": false,
+  "menuVisibility": {
+    "dashboard": true,
+    "upload": true,
+    "edition": true,
+    "financeGlobal": true,
+    "projectManagement": true,
+    "invoicing": true,
+    "association": true
+  }
+}

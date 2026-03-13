@@ -10,11 +10,13 @@ import AccountProjectionManager from './AccountProjectionManager';
 interface ProjectionConfigProps {
   config: ProjectionConfigType;
   onConfigChange: (config: ProjectionConfigType) => void;
+  titleKey?: string;
 }
 
 const ProjectionConfig: React.FC<ProjectionConfigProps> = ({
   config,
   onConfigChange,
+  titleKey,
 }) => {
   const { t } = useTranslation();
   const [isEditingConfig, setIsEditingConfig] = useState(false);
@@ -49,7 +51,7 @@ const ProjectionConfig: React.FC<ProjectionConfigProps> = ({
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            {t('projectManagement.dashboard.config', 'Configuration de projection')}
+            {titleKey ? t(titleKey) : t('projectManagement.dashboard.config', 'Configuration de projection')}
           </h3>
           {!isEditingConfig ? (
             <button

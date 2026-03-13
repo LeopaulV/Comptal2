@@ -123,22 +123,14 @@ export class EditionService {
       const dataDirectory = settings.dataDirectory || 'data';
       
       // Lire tous les fichiers CSV du dossier de données
-      let files: string[] = [];
-      try {
-        files = await FileService.readDirectory(dataDirectory);
-      } catch (error: any) {
-        // Si le dossier n'existe pas ou est vide, retourner une structure vide
-        const errorMessage = error.message || String(error);
-        if (errorMessage.includes('non trouvé') || errorMessage.includes('n\'existe pas') || errorMessage.includes('does not exist')) {
-          console.warn(`[EditionService] Le dossier ${dataDirectory} n'existe pas ou est vide. Retour d'une structure vide.`);
-          return {
-            headers: this.REQUIRED_COLUMNS,
-            rows: [],
-            ignoredFiles: undefined,
-          };
-        }
-        // Pour les autres erreurs, relancer
-        throw error;
+      const files = await FileService.readDirectoryOptional(dataDirectory);
+      if (files === null) {
+        console.warn(`[EditionService] Le dossier ${dataDirectory} n'existe pas encore. Retour d'une structure vide.`);
+        return {
+          headers: this.REQUIRED_COLUMNS,
+          rows: [],
+          ignoredFiles: undefined,
+        };
       }
       
       const csvFiles = files.filter(file => file.endsWith('.csv'));

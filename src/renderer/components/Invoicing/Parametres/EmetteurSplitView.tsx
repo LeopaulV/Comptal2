@@ -1,71 +1,72 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { EmetteurExtended, EmetteurExtendedSerialized } from '../../../types/Invoice';
+import { Info } from 'lucide-react';
+import { EmetteurExtended } from '../../../types/Invoice';
 import { EmetteurService } from '../../../services/EmetteurService';
-import { FileService } from '../../../services/FileService';
 import { EmetteurFormPanel, defaultEmetteur } from './EmetteurFormPanel';
 import { PDFPreviewPanel } from './PDFPreviewPanel';
 
-const EXTENDED_EMETTEUR_PATH = 'parametre/emetteur_extended.json';
+interface EmetteurSplitViewProps {
+  emetteur: EmetteurExtended | null;
+  onEmetteurSaved?: (updated: EmetteurExtended) => void;
+}
 
-export const EmetteurSplitView: React.FC = () => {
+export const EmetteurSplitView: React.FC<EmetteurSplitViewProps> = ({
+  emetteur: emetteurFromParent,
+  onEmetteurSaved,
+}) => {
   const { t } = useTranslation();
   const [emetteur, setEmetteur] = useState<EmetteurExtended>(defaultEmetteur());
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
+  const [isNewProfile, setIsNewProfile] = useState(false);
 
   useEffect(() => {
-    const loadEmetteur = async () => {
-      try {
-        // Essayer de charger l'émetteur étendu
-        let loaded: EmetteurExtended | null = null;
-        
+    if (emetteurFromParent) {
+      setIsNewProfile(!emetteurFromParent.denominationSociale);
+      setEmetteur(emetteurFromParent);
+      setIsLoading(false);
+    } else {
+      const loadFromService = async () => {
         try {
-          const extendedContent = await FileService.readFile(EXTENDED_EMETTEUR_PATH);
-          const parsed: EmetteurExtendedSerialized = JSON.parse(extendedContent);
-          loaded = {
-            ...parsed,
-            createdAt: new Date(parsed.createdAt),
-            updatedAt: new Date(parsed.updatedAt),
-          };
-        } catch {
-          // Si pas d'émetteur étendu, charger l'émetteur classique
-          const baseEmetteur = await EmetteurService.loadEmetteur();
-          if (baseEmetteur) {
-            loaded = {
-              ...baseEmetteur,
-              linkedAccounts: [],
-              selectedMentionsLegales: [],
-              customMentionsLegales: [],
-              mentionPlaceholderValues: {},
-            };
+          const loaded = await EmetteurService.loadEmetteurExtended();
+          if (loaded) {
+            setIsNewProfile(!loaded.denominationSociale);
+            setEmetteur(loaded);
+          } else {
+            setIsNewProfile(true);
           }
+        } catch (error) {
+          console.error('Erreur lors du chargement de l\'émetteur:', error);
+          setIsNewProfile(true);
+        } finally {
+          setIsLoading(false);
         }
-
-        if (loaded) {
-          setEmetteur(loaded);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement de l\'émetteur:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadEmetteur();
-  }, []);
+      };
+      loadFromService();
+    }
+  }, [emetteurFromParent]);
 
   const handleSave = async () => {
     try {
       setStatus(null);
 
-      // Valider et sauvegarder l'émetteur étendu (met à jour le cache pour la génération PDF)
+      const errors = EmetteurService.validateEmetteur(emetteur);
+      if (errors.length > 0) {
+        setStatus(t('invoicing.emetteur.validationError', { fields: errors.join(', ') }));
+        return;
+      }
+
       await EmetteurService.saveEmetteurExtended(emetteur);
 
-      setStatus(t('invoicing.emetteur.saved'));
+      const saved = await EmetteurService.loadEmetteurExtended();
+      if (saved) {
+        setEmetteur(saved);
+        onEmetteurSaved?.(saved);
+      }
 
-      // Effacer le statut après 3 secondes
+      setStatus(t('invoicing.emetteur.saved'));
       setTimeout(() => setStatus(null), 3000);
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -84,6 +85,15 @@ export const EmetteurSplitView: React.FC = () => {
 
   return (
     <div className="emetteur-split-view">
+      {isNewProfile && (
+        <div className="emetteur-setup-notice">
+          <Info size={18} />
+          <div className="emetteur-setup-notice-content">
+            <strong>{t('invoicing.emetteur.setupRequired')}</strong>
+            <span>{t('invoicing.emetteur.setupRequiredHint')}</span>
+          </div>
+        </div>
+      )}
       {/* Panneau gauche: Formulaire */}
       <div className="emetteur-form-container">
         <EmetteurFormPanel

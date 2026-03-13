@@ -13,22 +13,35 @@ interface DevisRowProps {
   devis: Devis;
   factures: Facture[];
   transactionsById: Map<string, Transaction>;
+  clientName: string;
   onAddFacture: () => void;
   onEditDevis: () => void;
   onDeleteFacture?: (facture: Facture) => void;
   onRefresh: () => Promise<void>;
 }
 
-export const DevisRow: React.FC<DevisRowProps> = ({ devis, factures, transactionsById, onAddFacture, onEditDevis, onDeleteFacture, onRefresh }) => {
+export const DevisRow: React.FC<DevisRowProps> = ({ devis, factures, transactionsById, clientName, onAddFacture, onEditDevis, onDeleteFacture, onRefresh }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // Calcul du ratio Factures Générées = [Somme TTC des factures] / [TTC du devis]
-  const totalFacturesTTC = factures.reduce((sum, facture) => sum + (facture.totalTTC || 0), 0);
-  const ratioFacturesGenerees = devis.totalTTC > 0 ? (totalFacturesTTC / devis.totalTTC) * 100 : 0;
-  const ratioFacturesGenereesDisplay = Math.min(ratioFacturesGenerees, 100); // Plafonner à 100%
+  // Taux de complétion = [Somme des paiements (transactions)] / [TTC du devis]
+  const totalPaid = factures.reduce(
+    (sum, facture) => sum + facture.paiements.reduce((s, p) => s + p.montant, 0),
+    0
+  );
+  const completionRate = devis.totalTTC > 0 ? (totalPaid / devis.totalTTC) * 100 : 0;
+  const completionRateDisplay = Math.min(completionRate, 100); // Plafonner à 100%
+
+  const devisCompletionClass =
+    completionRate >= 100 ? 'invoicing-devis-complet' : completionRate > 0 ? 'invoicing-devis-partiel' : 'invoicing-devis-0';
+
+  const postesTitles = devis.postes.map((p) => p.designation).filter(Boolean).join(', ');
+  const marges = devis.postes
+    .map((p) => (p as { marge?: number }).marge)
+    .filter((m): m is number => m != null && !Number.isNaN(m));
+  const tauxMarge = marges.length > 0 ? (marges.reduce((a, b) => a + b, 0) / marges.length).toFixed(1) : null;
 
   const handleLinkPdf = async () => {
     setIsLinking(true);
@@ -91,30 +104,54 @@ export const DevisRow: React.FC<DevisRowProps> = ({ devis, factures, transaction
 
   return (
     <div className="invoicing-nested">
-      <div className="invoicing-list-item invoicing-nested-item invoicing-devis-row">
+      <div className={`invoicing-list-item invoicing-nested-item invoicing-devis-row ${devisCompletionClass}`}>
         <ChevronToggle isOpen={isOpen} onClick={() => setIsOpen((prev) => !prev)} />
         <div className="invoicing-row-content">
-        <div className="invoicing-row-name">
-          {devis.numero}
-          <span className="invoicing-row-meta">
-            • {formatDate(devis.dateEmission)} • {formatCurrency(devis.totalTTC)}
-          </span>
-        </div>
-        <div className="invoicing-recovery-container">
+          <div className="invoicing-row-main">
+            <div className="invoicing-row-name">
+              {devis.numero}
+              {devis.intituleSecondaire && (
+                <span className="invoicing-row-intitule"> • {devis.intituleSecondaire}</span>
+              )}
+              <span className="invoicing-row-meta">
+                • {formatDate(devis.dateEmission)} • {formatCurrency(devis.totalTTC)}
+              </span>
+            </div>
+            {(devis.dateEcheance || postesTitles || tauxMarge) && (
+              <div className="invoicing-row-extra-inline">
+                {devis.dateEcheance && (
+                  <span>
+                    {t('invoicing.gestion.dateEcheance')}: {formatDate(devis.dateEcheance)}
+                  </span>
+                )}
+                {postesTitles && (
+                  <span title={postesTitles}>
+                    {t('invoicing.gestion.postes')}: {postesTitles.length > 40 ? `${postesTitles.slice(0, 40)}…` : postesTitles}
+                  </span>
+                )}
+                {tauxMarge != null && (
+                  <span>
+                    {t('invoicing.gestion.tauxMarge')}: {tauxMarge}%
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="invoicing-recovery-container">
           <div className="invoicing-recovery-bar-wrapper">
             <div className="invoicing-recovery-bar">
-              <div
-                className="invoicing-recovery-progress"
-                style={{ width: `${ratioFacturesGenereesDisplay}%` }}
-              />
+            <div
+              className="invoicing-recovery-progress"
+              style={{ width: `${completionRateDisplay}%` }}
+            />
             </div>
             <span className="invoicing-recovery-label">
-              {factures.length > 0
-                ? `${formatCurrency(totalFacturesTTC)} / ${formatCurrency(devis.totalTTC)}`
+              {devis.totalTTC > 0
+                ? `${formatCurrency(totalPaid)} / ${formatCurrency(devis.totalTTC)}`
                 : t('invoicing.gestion.notConverted', 'Non converti')}
             </span>
           </div>
-          <span className="invoicing-recovery-percent">{ratioFacturesGenereesDisplay.toFixed(0)}%</span>
+          <span className="invoicing-recovery-percent">{completionRateDisplay.toFixed(0)}%</span>
         </div>
         </div>
         <div className="invoicing-list-item-actions">
@@ -132,7 +169,7 @@ export const DevisRow: React.FC<DevisRowProps> = ({ devis, factures, transaction
           </button>
           <button
             type="button"
-            className="secondary"
+            className="secondary danger"
             onClick={handleDeleteDevis}
             title={t('invoicing.gestion.archiveDevis', 'Archiver (reste dans le système)')}
           >
@@ -166,6 +203,7 @@ export const DevisRow: React.FC<DevisRowProps> = ({ devis, factures, transaction
               key={facture.id}
               facture={facture}
               transactionsById={transactionsById}
+              clientName={clientName}
               onDeleteFacture={onDeleteFacture ? () => onDeleteFacture(facture) : undefined}
               onRefresh={onRefresh}
             />

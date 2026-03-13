@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building2, MapPin, Phone, CreditCard, Search } from 'lucide-react';
+import { Building2, MapPin, Phone, CreditCard, Search, Scale } from 'lucide-react';
 import { 
   Adresse, 
   EmetteurExtended, 
@@ -254,6 +254,43 @@ export const EmetteurFormPanel: React.FC<EmetteurFormPanelProps> = ({
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Section: Régime fiscal */}
+      <div className="emetteur-section">
+        <div className="emetteur-section-header">
+          <Scale size={18} />
+          <h3>{t('invoicing.charges.regime.title')}</h3>
+        </div>
+        
+        <div className="emetteur-form-grid">
+          <div className="form-field">
+            <label>{t('invoicing.charges.regime.fiscal')}</label>
+            <select
+              value={emetteur.regimeFiscal || ''}
+              onChange={(e) => onChange({ ...emetteur, regimeFiscal: (e.target.value || undefined) as any })}
+            >
+              <option value="">{t('common.select')}</option>
+              <option value="micro_bic">{t('invoicing.charges.regime.microBIC')}</option>
+              <option value="micro_bnc">{t('invoicing.charges.regime.microBNC')}</option>
+              <option value="reel_simplifie">{t('invoicing.charges.regime.reelSimplifie')}</option>
+              <option value="reel_normal">{t('invoicing.charges.regime.reelNormal')}</option>
+              <option value="is">{t('invoicing.charges.regime.IS')}</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label>{t('invoicing.charges.regime.tva')}</label>
+            <select
+              value={emetteur.regimeTVA}
+              onChange={(e) => onChange({ ...emetteur, regimeTVA: e.target.value as any })}
+            >
+              <option value="franchise">{t('invoicing.charges.regime.tvaFranchise')}</option>
+              <option value="reel_simplifie">{t('invoicing.charges.regime.tvaReelSimplifie')}</option>
+              <option value="reel_normal">{t('invoicing.charges.regime.tvaReelNormal')}</option>
+            </select>
+          </div>
         </div>
       </div>
 

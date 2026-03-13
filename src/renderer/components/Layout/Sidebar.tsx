@@ -9,6 +9,7 @@ import {
   faChartBar, 
   faTasks,
   faFileInvoice,
+  faHandHoldingHeart,
   faCog,
   faChevronLeft,
   faChevronRight
@@ -53,6 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
     { path: '/finance-global', icon: faChartBar, label: t('navigation.financeGlobal'), key: 'financeGlobal' as keyof MenuVisibility },
     { path: '/project-management', icon: faTasks, label: t('navigation.projectManagement'), key: 'projectManagement' as keyof MenuVisibility },
     { path: '/invoicing', icon: faFileInvoice, label: t('navigation.invoicing'), key: 'invoicing' as keyof MenuVisibility },
+    { path: '/association', icon: faHandHoldingHeart, label: t('navigation.association'), key: 'association' as keyof MenuVisibility },
     { path: '/parametre', icon: faCog, label: t('navigation.settings'), key: null }, // Paramètres toujours visible
   ];
 
@@ -79,7 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         )}
         <button
           onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
           title={isCollapsed ? t('navigation.expand') : t('navigation.collapse')}
         >
           <FontAwesomeIcon icon={isCollapsed ? faChevronRight : faChevronLeft} size="lg" />
@@ -123,7 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
       {!isCollapsed && (
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            Version 1.0.0
+            Version 1.1.0
           </p>
         </div>
       )}

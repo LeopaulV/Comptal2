@@ -11,23 +11,25 @@ import {
   Legend,
   ChartOptions
 } from 'chart.js';
-import { Facture } from '../../../types/Invoice';
+import { Devis, Facture } from '../../../types/Invoice';
 import { Transaction } from '../../../types/Transaction';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface InvoiceVsPaymentChartProps {
+  devis: Devis[];
   factures: Facture[];
   transactions: Transaction[];
 }
 
 interface MonthlyData {
   month: string;
+  devisAmount: number;
   invoicesAmount: number;
   paymentsAmount: number;
 }
 
-const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ factures, transactions }) => {
+const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ devis = [], factures, transactions }) => {
   const { t } = useTranslation();
   const [isDarkMode, setIsDarkMode] = useState(() => 
     document.documentElement.classList.contains('dark')
@@ -68,6 +70,24 @@ const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ factures,
   const monthlyData = useMemo(() => {
     const dataMap = new Map<string, MonthlyData>();
 
+    // Grouper les devis par mois
+    devis.filter((d) => !d.supprime).forEach((devisItem) => {
+      const date = new Date(devisItem.dateEmission);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!dataMap.has(monthKey)) {
+        dataMap.set(monthKey, {
+          month: monthKey,
+          devisAmount: 0,
+          invoicesAmount: 0,
+          paymentsAmount: 0
+        });
+      }
+      
+      const data = dataMap.get(monthKey)!;
+      data.devisAmount += devisItem.totalTTC;
+    });
+
     // Grouper les factures par mois
     factures.forEach((facture) => {
       const date = new Date(facture.dateEmission);
@@ -76,6 +96,7 @@ const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ factures,
       if (!dataMap.has(monthKey)) {
         dataMap.set(monthKey, {
           month: monthKey,
+          devisAmount: 0,
           invoicesAmount: 0,
           paymentsAmount: 0
         });
@@ -94,6 +115,7 @@ const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ factures,
         if (!dataMap.has(monthKey)) {
           dataMap.set(monthKey, {
             month: monthKey,
+            devisAmount: 0,
             invoicesAmount: 0,
             paymentsAmount: 0
           });
@@ -112,7 +134,7 @@ const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ factures,
     return Array.from(dataMap.values())
       .sort((a, b) => a.month.localeCompare(b.month))
       .slice(-12); // Garder les 12 derniers mois
-  }, [factures, transactions]);
+  }, [devis, factures, transactions]);
 
   // Formater les labels de mois
   const monthLabels = useMemo(() => {
@@ -125,13 +147,22 @@ const InvoiceVsPaymentChart: React.FC<InvoiceVsPaymentChartProps> = ({ factures,
 
   // Couleurs selon le thème - mémorisées pour éviter les re-rendus
   const colors = useMemo(() => ({
-    invoiceColor: isDarkMode ? '#60a5fa' : '#1e3a8a', // Bleu professionnel
-    paymentColor: isDarkMode ? '#cbd5e1' : '#e2e8f0', // Gris
+    devisColor: isDarkMode ? '#94a3b8' : '#94a3b8', // Gris
+    invoiceColor: isDarkMode ? '#93c5fd' : '#bfdbfe', // Bleu clair / pastel
+    paymentColor: isDarkMode ? '#3b82f6' : '#2563eb', // Bleu
   }), [isDarkMode]);
 
   const chartData = useMemo(() => ({
     labels: monthLabels,
     datasets: [
+      {
+        label: t('invoicing.charts.devisGenerated', 'Devis générés'),
+        data: monthlyData.map(d => d.devisAmount),
+        backgroundColor: colors.devisColor,
+        borderColor: colors.devisColor,
+        borderWidth: 1,
+        borderRadius: 4,
+      },
       {
         label: t('invoicing.charts.invoicesIssued', 'Factures émises'),
         data: monthlyData.map(d => d.invoicesAmount),

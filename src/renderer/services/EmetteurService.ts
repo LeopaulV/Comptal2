@@ -10,10 +10,72 @@ import { FileService } from './FileService';
 
 const EMETTEUR_PATH = 'parametre/emetteur.json';
 const SETTINGS_PATH = 'parametre/invoice_settings.json';
+const DEFAULT_ADRESSE = { rue: '', codePostal: '', ville: '', pays: 'France' };
+
+const generateEmetteurId = () => `emit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export class EmetteurService {
   private static emetteurCache: Emetteur | null = null;
   private static settingsCache: InvoiceSettings | null = null;
+  private static extendedEmetteurCache: EmetteurExtended | null = null;
+  private static readonly EXTENDED_EMETTEUR_PATH = 'parametre/emetteur_extended.json';
+
+  private static parseDateOrNow(value: unknown): Date {
+    if (!value) return new Date();
+    const parsed = new Date(value as string);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  }
+
+  private static normalizeBaseEmetteur(raw: Partial<EmetteurSerialized> | null | undefined): Emetteur {
+    const address = raw?.adresse ?? {};
+    return {
+      id: raw?.id || generateEmetteurId(),
+      type: raw?.type ?? 'entreprise',
+      denominationSociale: raw?.denominationSociale ?? '',
+      formeJuridique: raw?.formeJuridique,
+      siren: raw?.siren,
+      siret: raw?.siret ?? '',
+      numeroTVA: raw?.numeroTVA,
+      rna: raw?.rna,
+      codeNAF: raw?.codeNAF,
+      rcs: raw?.rcs,
+      rm: raw?.rm,
+      capitalSocial: raw?.capitalSocial,
+      adresse: {
+        rue: address.rue ?? DEFAULT_ADRESSE.rue,
+        codePostal: address.codePostal ?? DEFAULT_ADRESSE.codePostal,
+        ville: address.ville ?? DEFAULT_ADRESSE.ville,
+        pays: address.pays ?? DEFAULT_ADRESSE.pays,
+      },
+      telephone: raw?.telephone,
+      email: raw?.email,
+      siteWeb: raw?.siteWeb,
+      logo: raw?.logo,
+      couleurPrincipale: raw?.couleurPrincipale,
+      coordonneesBancaires: raw?.coordonneesBancaires,
+      regimeTVA: raw?.regimeTVA ?? 'franchise',
+      regimeFiscal: raw?.regimeFiscal,
+      mentionFranchiseTVA: raw?.mentionFranchiseTVA,
+      assurancePro: raw?.assurancePro,
+      createdAt: this.parseDateOrNow(raw?.createdAt),
+      updatedAt: this.parseDateOrNow(raw?.updatedAt),
+    };
+  }
+
+  private static normalizeExtendedEmetteur(
+    raw: Partial<EmetteurExtendedSerialized> | null | undefined
+  ): EmetteurExtended {
+    const base = this.normalizeBaseEmetteur(raw);
+    return {
+      ...base,
+      linkedAccounts: raw?.linkedAccounts ?? [],
+      pdfTemplateDevis: raw?.pdfTemplateDevis,
+      pdfTemplateFacture: raw?.pdfTemplateFacture,
+      selectedMentionsLegales: raw?.selectedMentionsLegales ?? [],
+      customMentionsLegales: raw?.customMentionsLegales ?? [],
+      mentionPlaceholderValues: raw?.mentionPlaceholderValues ?? {},
+    };
+  }
 
   static async loadEmetteur(): Promise<Emetteur | null> {
     if (this.emetteurCache) {
@@ -22,12 +84,8 @@ export class EmetteurService {
 
     try {
       const content = await FileService.readFile(EMETTEUR_PATH);
-      const parsed: EmetteurSerialized = JSON.parse(content);
-      const emetteur: Emetteur = {
-        ...parsed,
-        createdAt: new Date(parsed.createdAt),
-        updatedAt: new Date(parsed.updatedAt),
-      };
+      const parsed = JSON.parse(content) as Partial<EmetteurSerialized>;
+      const emetteur = this.normalizeBaseEmetteur(parsed);
       this.emetteurCache = emetteur;
       return emetteur;
     } catch (error: any) {
@@ -208,9 +266,6 @@ export class EmetteurService {
   // MÉTHODES POUR ÉMETTEUR ÉTENDU
   // ============================================
 
-  private static extendedEmetteurCache: EmetteurExtended | null = null;
-  private static readonly EXTENDED_EMETTEUR_PATH = 'parametre/emetteur_extended.json';
-
   /**
    * Charge l'émetteur étendu avec les comptes liés et configurations PDF
    */
@@ -221,12 +276,8 @@ export class EmetteurService {
 
     try {
       const content = await FileService.readFile(this.EXTENDED_EMETTEUR_PATH);
-      const parsed: EmetteurExtendedSerialized = JSON.parse(content);
-      const emetteur: EmetteurExtended = {
-        ...parsed,
-        createdAt: new Date(parsed.createdAt),
-        updatedAt: new Date(parsed.updatedAt),
-      };
+      const parsed = JSON.parse(content) as Partial<EmetteurExtendedSerialized>;
+      const emetteur = this.normalizeExtendedEmetteur(parsed);
       this.extendedEmetteurCache = emetteur;
       return emetteur;
     } catch (error: any) {
@@ -240,6 +291,7 @@ export class EmetteurService {
           customMentionsLegales: [],
           mentionPlaceholderValues: {},
         };
+        this.extendedEmetteurCache = extended;
         return extended;
       }
       return null;

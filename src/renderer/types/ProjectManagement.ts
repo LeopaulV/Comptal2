@@ -8,6 +8,13 @@ export interface RateDefinition {
   endDate?: Date; // Optionnel : date de fin d'application du taux
 }
 
+export type FiscalCategory = 'LOYER' | 'SALAIRES' | 'ACHATS' | 'HONORAIRES' | 'VEHICULE' | 'DEPLACEMENT' | 'FOURNITURES' | 'ASSURANCES' | 'TELECOM' | 'AUTRES';
+
+export const FISCAL_CATEGORIES: FiscalCategory[] = [
+  'LOYER', 'SALAIRES', 'ACHATS', 'HONORAIRES', 'VEHICULE',
+  'DEPLACEMENT', 'FOURNITURES', 'ASSURANCES', 'TELECOM', 'AUTRES',
+];
+
 export interface Subscription {
   id: string;
   name: string;
@@ -15,10 +22,12 @@ export interface Subscription {
   periodicity: Periodicity;
   type: 'debit' | 'credit';
   startDate: Date;
-  endDate?: Date; // Optionnel pour abonnements avec fin
-  accountCode?: string; // Optionnel : compte associé
-  categoryCode?: string; // Optionnel : catégorie associée
-  color: string; // Couleur pour les graphiques (obligatoire)
+  endDate?: Date;
+  accountCode?: string;
+  categoryCode?: string;
+  fiscalCategory?: FiscalCategory;
+  tvaRate?: number;
+  color: string;
   advancedSettings?: {
     /** @deprecated Utiliser rates à la place */
     rate?: {
@@ -68,6 +77,22 @@ export interface ProjectionDataByAccount {
   netFlow: number;
 }
 
+// Données de charges par catégorie (transactions réelles agrégées)
+export interface CategoryMonthData {
+  code: string;
+  name: string;
+  color: string;
+  monthlyAmounts: Record<string, number>; // clé 'YYYY-MM' → montant total (abs)
+  total: number;
+  average: number; // total / nb mois avec données
+}
+
+export interface CategoryChargesData {
+  categories: CategoryMonthData[];
+  referencePeriod: { startDate: Date; endDate: Date };
+  totalByMonth: Record<string, number>; // somme toutes catégories par mois
+}
+
 // Structure d'un projet complet
 export interface Project {
   code: string; // Code unique du projet (ex: "PROJ001", "MAISON", "VOITURE")
@@ -76,6 +101,13 @@ export interface Project {
   projectionConfig: ProjectionConfig;
   createdAt: Date; // Date de création
   updatedAt: Date; // Date de dernière modification
+  /** Mode de gestion des charges pour l'association */
+  chargesMode?: 'manual' | 'categories';
+  /** Config pour le mode catégories (période de référence + catégories sélectionnées) */
+  categoryChargesConfig?: {
+    referencePeriod: { startDate: Date; endDate: Date };
+    selectedCategories: string[];
+  };
 }
 
 // Taux sérialisé (dates en ISO string pour le JSON)
@@ -122,6 +154,11 @@ export interface ProjectSerialized {
   };
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
+  chargesMode?: 'manual' | 'categories';
+  categoryChargesConfig?: {
+    referencePeriod: { startDate: string; endDate: string };
+    selectedCategories: string[];
+  };
 }
 
 // Configuration des projets (format fichier JSON)

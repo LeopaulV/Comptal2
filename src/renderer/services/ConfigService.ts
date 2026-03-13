@@ -188,6 +188,12 @@ export class ConfigService {
   }
 
   /**
+   * Codes des projets exclus des sélecteurs (Gestion et Projet, Finance Global).
+   * Ces projets sont réservés à leurs pages dédiées (ex: Charges Entreprise, Association).
+   */
+  static readonly PROJECT_CODES_EXCLUDED_FROM_SELECTION = ['ENTREPRISE', 'ASSOCIATION'] as const;
+
+  /**
    * Charge tous les projets
    */
   static async loadProjects(): Promise<ProjectsConfig> {
@@ -217,6 +223,18 @@ export class ConfigService {
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des projets: ${error.message}`);
     }
+  }
+
+  /**
+   * Charge les projets sélectionnables (exclut ENTREPRISE, etc.).
+   * Utilisé par Gestion et Projet et Finance Global.
+   */
+  static async loadSelectableProjects(): Promise<ProjectsConfig> {
+    const projects = await this.loadProjects();
+    const excluded = new Set<string>(this.PROJECT_CODES_EXCLUDED_FROM_SELECTION);
+    return Object.fromEntries(
+      Object.entries(projects).filter(([code]) => !excluded.has(code))
+    );
   }
 
   /**
@@ -284,7 +302,7 @@ export class ConfigService {
     }
 
     // Convertir les dates ISO string en Date
-    return {
+    const project: Project = {
       code: projectSerialized.code,
       name: projectSerialized.name,
       subscriptions: projectSerialized.subscriptions.map(sub => this.deserializeSubscription(sub)),
@@ -297,6 +315,21 @@ export class ConfigService {
       createdAt: new Date(projectSerialized.createdAt),
       updatedAt: new Date(projectSerialized.updatedAt),
     };
+
+    if (projectSerialized.chargesMode) {
+      project.chargesMode = projectSerialized.chargesMode;
+    }
+    if (projectSerialized.categoryChargesConfig) {
+      project.categoryChargesConfig = {
+        referencePeriod: {
+          startDate: new Date(projectSerialized.categoryChargesConfig.referencePeriod.startDate),
+          endDate: new Date(projectSerialized.categoryChargesConfig.referencePeriod.endDate),
+        },
+        selectedCategories: projectSerialized.categoryChargesConfig.selectedCategories,
+      };
+    }
+
+    return project;
   }
 
   /**
@@ -319,6 +352,19 @@ export class ConfigService {
       createdAt: project.createdAt.toISOString(),
       updatedAt: new Date().toISOString(), // Mettre à jour la date de modification
     };
+
+    if (project.chargesMode) {
+      projectSerialized.chargesMode = project.chargesMode;
+    }
+    if (project.categoryChargesConfig) {
+      projectSerialized.categoryChargesConfig = {
+        referencePeriod: {
+          startDate: project.categoryChargesConfig.referencePeriod.startDate.toISOString(),
+          endDate: project.categoryChargesConfig.referencePeriod.endDate.toISOString(),
+        },
+        selectedCategories: project.categoryChargesConfig.selectedCategories,
+      };
+    }
 
     projects[project.code] = projectSerialized;
     await this.saveProjects(projects);

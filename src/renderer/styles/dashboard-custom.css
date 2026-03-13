@@ -169,8 +169,14 @@
   color: var(--dashboard-gray-900);
 }
 
-.dark .sidebar-collapse-button {
-  color: var(--dashboard-gray-500);
+.dark .sidebar-collapse-button,
+.dark .sidebar-collapse-button svg,
+.dark .sidebar-collapse-button .svg-inline--fa,
+html.dark .sidebar-collapse-button,
+html.dark .sidebar-collapse-button svg,
+html.dark .sidebar-collapse-button .svg-inline--fa {
+  color: var(--dashboard-gray-800) !important;
+  fill: var(--dashboard-gray-800) !important;
 }
 
 .dark .sidebar-collapse-button:hover {

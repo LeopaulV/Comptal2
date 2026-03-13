@@ -2,6 +2,8 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Devis, Emetteur, EmetteurExtended, Facture, PosteFacture, PDFTemplate } from '../types/Invoice';
 import { ClientService } from './ClientService';
+import { ConfigService } from './ConfigService';
+import { InvoiceService } from './InvoiceService';
 import { PDFTemplateService } from './PDFTemplateService';
 import { LegalMentionsService } from './LegalMentionsService';
 
@@ -42,22 +44,78 @@ const loadFonts = async () => {
   }
 };
 
-/** Charge les fonts pdfmake une seule fois (partagé avec PDFPreviewPanel et génération PDF). */
-export const ensurePdfMakeFonts = loadFonts;
-
 const formatCurrency = (value: number) => `${value.toFixed(2)} €`;
+
+const formatUnite = (poste: PosteFacture): string => {
+  if (poste.type === 'materiel') {
+    const m = poste as import('../types/Invoice').PosteMateriel;
+    const labels: Record<string, string> = {
+      unite: 'Unité',
+      m2: 'm²',
+      m3: 'm³',
+      kg: 'kg',
+      g: 'g',
+      m: 'm',
+      l: 'L',
+      heure: 'h',
+      jour: 'j',
+      forfait: 'Forfait',
+    };
+    return labels[m.unite] || m.unite;
+  }
+  const t = poste as import('../types/Invoice').PosteTravail;
+  return t.nombreIntervenants > 1 ? `h (×${t.nombreIntervenants} interv.)` : 'h';
+};
 
 const buildPostesRows = (postes: PosteFacture[]) => {
   return postes.map((poste) => {
-    const totalHT = poste.type === 'materiel'
-      ? poste.prixUnitaireHT * poste.quantite
-      : poste.tauxHoraire * poste.heuresEstimees * poste.nombreIntervenants;
+    let prixUnitaireAffiche: number;
+    if (poste.type === 'materiel') {
+      const p = poste as import('../types/Invoice').PosteMateriel;
+      prixUnitaireAffiche = p.prixUnitaireHT;
+      if (p.remise) prixUnitaireAffiche *= 1 - p.remise / 100;
+      if (p.marge) prixUnitaireAffiche *= 1 + p.marge / 100;
+    } else {
+      const t = poste as import('../types/Invoice').PosteTravail;
+      prixUnitaireAffiche = t.tauxHoraire;
+      if (t.marge) prixUnitaireAffiche *= 1 + t.marge / 100;
+    }
+    const totalHT = InvoiceService.calculateLineHT(poste);
+
+    const designationParts: any[] = [{ text: poste.designation }];
+    if (poste.type === 'materiel') {
+      const m = poste as import('../types/Invoice').PosteMateriel;
+      const extras: string[] = [];
+      if (m.numeroArticle) extras.push(`N° art: ${m.numeroArticle}`);
+      if (m.numeroLot) extras.push(`Lot: ${m.numeroLot}`);
+      if (m.reference) extras.push(`Réf: ${m.reference}`);
+      if (m.fournisseur) extras.push(`Fournisseur: ${m.fournisseur}`);
+      if (m.factureRef) extras.push(`Facture: ${m.factureRef}`);
+      if (extras.length > 0) {
+        designationParts.push({ text: extras.join(' | '), fontSize: 8, color: '#666' });
+      }
+    } else {
+      const t = poste as import('../types/Invoice').PosteTravail;
+      if (t.description) {
+        designationParts.push({ text: t.description, fontSize: 8, color: '#666' });
+      }
+      if (t.taches && t.taches.length > 0) {
+        designationParts.push({
+          ul: t.taches.map((task) => ({ text: task, fontSize: 8 })),
+          margin: [0, 2, 0, 0],
+        });
+      }
+    }
+
+    const designationCell = designationParts.length > 1 ? { stack: designationParts } : poste.designation;
+
     return [
-      poste.designation,
-      poste.type === 'materiel' ? poste.quantite : poste.heuresEstimees,
-      formatCurrency(poste.type === 'materiel' ? poste.prixUnitaireHT : poste.tauxHoraire),
-      `${poste.tauxTVA}%`,
-      formatCurrency(totalHT),
+      designationCell,
+      { text: poste.type === 'materiel' ? poste.quantite : poste.heuresEstimees, alignment: 'right' as const },
+      { text: formatUnite(poste), alignment: 'center' as const },
+      { text: formatCurrency(prixUnitaireAffiche), alignment: 'right' as const },
+      { text: `${poste.tauxTVA}%`, alignment: 'right' as const },
+      { text: formatCurrency(totalHT), alignment: 'right' as const },
     ];
   });
 };
@@ -164,13 +222,18 @@ const buildStyledDocDefinition = (
 
 const buildTableLayout = (template?: PDFTemplate) => {
   const colors = template?.colors || { primary: '#1e3a8a', border: '#e5e7eb' };
-  
+  const borderColor = colors.border || '#e5e7eb';
+
   return {
-    hLineWidth: () => 0.5,
-    vLineWidth: () => 0.5,
-    hLineColor: () => colors.border,
-    vLineColor: () => colors.border,
-    fillColor: (rowIndex: number) => (rowIndex === 0 ? colors.primary : null),
+    hLineWidth: (i: number, node: any) =>
+      i === 0 || i === 1 || i === node.table.body.length ? 0.75 : 0.25,
+    vLineWidth: () => 0.25,
+    hLineColor: () => borderColor,
+    vLineColor: () => borderColor,
+    fillColor: (rowIndex: number) => {
+      if (rowIndex === 0) return colors.primary;
+      return rowIndex % 2 === 1 ? '#f8fafc' : null;
+    },
   };
 };
 
@@ -199,11 +262,14 @@ const blobToBase64 = (blob: Blob): Promise<string> =>
     reader.readAsDataURL(blob);
   });
 
-const getPdfBlob = (pdfDoc: ReturnType<typeof pdfMake.createPdf>): Promise<Blob> => {
-  return new Promise((resolve) => {
-    pdfDoc.getBlob((blob: Blob) => {
-      resolve(blob);
-    });
+/** pdfmake 0.3 : getBlob() retourne une Promise ; anciennes versions utilisaient un callback */
+const getPdfBlob = async (pdfDoc: ReturnType<typeof pdfMake.createPdf>): Promise<Blob> => {
+  const result = (pdfDoc as any).getBlob?.();
+  if (result != null && typeof result.then === 'function') {
+    return result as Promise<Blob>;
+  }
+  return new Promise((resolve, reject) => {
+    (pdfDoc as any).getBlob((blob: Blob) => resolve(blob), (err?: unknown) => reject(err));
   });
 };
 
@@ -268,9 +334,8 @@ export class PDFService {
     const clientName =
       client?.denominationSociale || `${client?.prenom || ''} ${client?.nom || ''}`.trim();
 
+    const template = await this.getTemplate(options?.templateId);
     const ext = emetteur as EmetteurExtended;
-    const templateId = ext.pdfTemplateDevis ?? options?.templateId;
-    const template = await this.getTemplate(templateId);
     const mentionIds = ext.selectedMentionsLegales ?? options?.mentionIds;
     const mentionsText = await this.getMentionsText(
       mentionIds,
@@ -291,11 +356,12 @@ export class PDFService {
       {
         table: {
           headerRows: 1,
-          widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+          widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
           body: [
             [
               { text: 'Désignation', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Qté', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
+              { text: 'Unité', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Prix U. HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'TVA', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Total HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
@@ -327,9 +393,6 @@ export class PDFService {
     await saveOrDownloadPdf(docDefinition, `${devis.numero}.pdf`);
   }
 
-  /**
-   * Génère le PDF d'un devis et le sauvegarde dans data/attachments (pour pièce jointe automatique).
-   */
   static async generateDevisPDFToFile(
     devis: Devis,
     emetteur: Emetteur | EmetteurExtended,
@@ -340,9 +403,8 @@ export class PDFService {
     const clientName =
       client?.denominationSociale || `${client?.prenom || ''} ${client?.nom || ''}`.trim();
 
+    const template = await this.getTemplate(options?.templateId);
     const ext = emetteur as EmetteurExtended;
-    const templateId = ext.pdfTemplateDevis ?? options?.templateId;
-    const template = await this.getTemplate(templateId);
     const mentionIds = ext.selectedMentionsLegales ?? options?.mentionIds;
     const mentionsText = await this.getMentionsText(
       mentionIds,
@@ -363,11 +425,12 @@ export class PDFService {
       {
         table: {
           headerRows: 1,
-          widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+          widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
           body: [
             [
               { text: 'Désignation', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Qté', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
+              { text: 'Unité', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Prix U. HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'TVA', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Total HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
@@ -400,7 +463,8 @@ export class PDFService {
     const blob = await getPdfBlob(pdfDoc);
     const base64 = await blobToBase64(blob);
     const fileName = `${devis.numero.replace(/[/\\?*:|"]/g, '_')}.pdf`;
-    const relativePath = `data/attachments/${fileName}`;
+    const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
+    const relativePath = `${dataDir}/attachments/${fileName}`;
     if (isElectronAvailable()) {
       const writeResult = await window.electronAPI.writeBinaryFile(relativePath, base64);
       if (!writeResult.success) {
@@ -421,9 +485,8 @@ export class PDFService {
     const clientName =
       client?.denominationSociale || `${client?.prenom || ''} ${client?.nom || ''}`.trim();
 
+    const template = await this.getTemplate(options?.templateId);
     const ext = emetteur as EmetteurExtended;
-    const templateId = ext.pdfTemplateFacture ?? options?.templateId;
-    const template = await this.getTemplate(templateId);
     const mentionIds = ext.selectedMentionsLegales ?? options?.mentionIds;
     const mentionsText = await this.getMentionsText(
       mentionIds,
@@ -443,11 +506,12 @@ export class PDFService {
       {
         table: {
           headerRows: 1,
-          widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+          widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
           body: [
             [
               { text: 'Désignation', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Qté', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
+              { text: 'Unité', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Prix U. HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'TVA', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Total HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
@@ -489,9 +553,8 @@ export class PDFService {
     const clientName =
       client?.denominationSociale || `${client?.prenom || ''} ${client?.nom || ''}`.trim();
 
+    const template = await this.getTemplate(options?.templateId);
     const ext = emetteur as EmetteurExtended;
-    const templateId = ext.pdfTemplateFacture ?? options?.templateId;
-    const template = await this.getTemplate(templateId);
     const mentionIds = ext.selectedMentionsLegales ?? options?.mentionIds;
     const mentionsText = await this.getMentionsText(
       mentionIds,
@@ -511,11 +574,12 @@ export class PDFService {
       {
         table: {
           headerRows: 1,
-          widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+          widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
           body: [
             [
               { text: 'Désignation', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Qté', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
+              { text: 'Unité', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Prix U. HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'TVA', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
               { text: 'Total HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
@@ -548,7 +612,8 @@ export class PDFService {
     const blob = await getPdfBlob(pdfDoc);
     const base64 = await blobToBase64(blob);
     const fileName = `${facture.numero.replace(/[/\\?*:|"]/g, '_')}.pdf`;
-    const relativePath = `data/attachments/${fileName}`;
+    const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
+    const relativePath = `${dataDir}/attachments/${fileName}`;
     if (isElectronAvailable()) {
       const writeResult = await window.electronAPI.writeBinaryFile(relativePath, base64);
       if (!writeResult.success) {

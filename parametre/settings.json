@@ -13,6 +13,18 @@
     "edition": true,
     "financeGlobal": true,
     "projectManagement": true,
-    "invoicing": true
+    "invoicing": true,
+    "association": true
   }
 }
+{
+  "theme": "light",
+  "language": "fr",
+  "currency": "€",
+  "dateFormat": "DD/MM/YYYY",
+  "dataDirectory": "./data",
+  "autoSave": true,
+  "showBalance": true,
+  "defaultView": "dashboard"
+}
+

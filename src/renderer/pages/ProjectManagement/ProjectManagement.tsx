@@ -68,7 +68,7 @@ const ProjectManagement: React.FC = () => {
       setAccountColors(colors);
       setAccountNames(names);
 
-      const projects = await ConfigService.loadProjects();
+      const projects = await ConfigService.loadSelectableProjects();
       const projectCodes = Object.keys(projects);
       
       if (projectCodes.length > 0) {

@@ -7,6 +7,7 @@ export interface MenuVisibility {
   financeGlobal: boolean;
   projectManagement: boolean;
   invoicing: boolean;
+  association: boolean;
   // parametre est toujours visible, donc pas besoin de l'inclure
 }
 
@@ -38,6 +39,7 @@ export const DEFAULT_MENU_VISIBILITY: MenuVisibility = {
   financeGlobal: true,
   projectManagement: true,
   invoicing: true,
+  association: true,
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -49,6 +51,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoSave: true,
   showBalance: true,
   defaultView: 'dashboard',
+  onboardingCompleted: false,
   menuVisibility: DEFAULT_MENU_VISIBILITY,
 };
 

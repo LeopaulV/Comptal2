@@ -1,0 +1,47 @@
+{
+  "emetteur": {
+    "id": "emit-default",
+    "type": "entreprise",
+    "denominationSociale": "",
+    "formeJuridique": "",
+    "siren": "",
+    "siret": "",
+    "numeroTVA": "",
+    "rna": "",
+    "codeNAF": "",
+    "rcs": "",
+    "rm": "",
+    "capitalSocial": 0,
+    "adresse": {
+      "rue": "",
+      "codePostal": "",
+      "ville": "",
+      "pays": "France"
+    },
+    "telephone": "",
+    "email": "",
+    "siteWeb": "",
+    "logo": "",
+    "coordonneesBancaires": {
+      "titulaire": "",
+      "iban": "",
+      "bic": "",
+      "banque": ""
+    },
+    "regimeTVA": "franchise",
+    "mentionFranchiseTVA": "TVA non applicable, art. 293 B du CGI",
+    "createdAt": "2026-03-13T17:18:41.687Z",
+    "updatedAt": "2026-03-13T17:18:41.687Z"
+  },
+  "prefixeDevis": "DEVIS",
+  "prefixeFacture": "FAC",
+  "formatNumero": "{PREFIX}-{YEAR}-{SEQ:4}",
+  "prochainNumeroDevis": 1,
+  "prochainNumeroFacture": 1,
+  "tauxTVADefaut": 20,
+  "delaiPaiementDefaut": 30,
+  "conditionsPaiementDefaut": "Paiement à 30 jours",
+  "mentionsPenalitesRetard": "",
+  "mentionIndemniteRecouvrement": "",
+  "mentionsParticulieres": ""
+}

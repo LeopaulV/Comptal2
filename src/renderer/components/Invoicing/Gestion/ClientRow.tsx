@@ -1,10 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle } from 'lucide-react';
 import { Client, Devis, Facture } from '../../../types/Invoice';
 import { DevisRow } from './DevisRow';
 import { FactureRow } from './FactureRow';
 import { ChevronToggle } from './ChevronToggle';
 import { Transaction } from '../../../types/Transaction';
+
+function formatAdresse(adresse: { rue: string; codePostal: string; ville: string; pays: string }): string {
+  const parts = [adresse.rue, `${adresse.codePostal} ${adresse.ville}`.trim(), adresse.pays].filter(Boolean);
+  return parts.join(', ');
+}
 
 interface ClientRowProps {
   client: Client;
@@ -17,6 +23,8 @@ interface ClientRowProps {
   onAddFacture: (devis: Devis) => void;
   onDeleteFacture: (facture: Facture) => void;
   onRefresh: () => Promise<void>;
+  defaultExpanded?: boolean;
+  onExpanded?: () => void;
 }
 
 export const ClientRow: React.FC<ClientRowProps> = ({
@@ -30,53 +38,70 @@ export const ClientRow: React.FC<ClientRowProps> = ({
   onAddFacture,
   onDeleteFacture,
   onRefresh,
+  defaultExpanded = false,
+  onExpanded,
 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
+  useEffect(() => {
+    if (defaultExpanded) {
+      setIsOpen(true);
+      onExpanded?.();
+    }
+  }, [defaultExpanded, onExpanded]);
+
   const clientLabel = client.denominationSociale || `${client.prenom || ''} ${client.nom || ''}`.trim();
+  const formattedAdresse = client.adresseFacturation ? formatAdresse(client.adresseFacturation) : '';
 
   // Calculer les statistiques du client
   const clientStats = useMemo(() => {
-    // Nombre de devis
     const devisCount = devisList.length;
 
-    // Nombre de factures (celles liées aux devis + celles sans devis)
     let factureCount = facturesSansDevis.length;
-    facturesByDevis.forEach((factures) => {
+    devisList.forEach((devis) => {
+      const factures = facturesByDevis.get(devis.id) || [];
       factureCount += factures.length;
     });
 
-    // Calculer le montant total et payé
-    let totalAmount = 0;
+    const totalDevisTTC = devisList.reduce((sum, d) => sum + d.totalTTC, 0);
     let paidAmount = 0;
+    let hasOverduePayment = false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Factures liées aux devis
-    facturesByDevis.forEach((factures) => {
+    const checkOverdue = (facture: Facture) => {
+      const factPaidAmount = facture.paiements.reduce((sum, p) => sum + p.montant, 0);
+      if (facture.dateEcheance && factPaidAmount < facture.totalTTC) {
+        const echeance = new Date(facture.dateEcheance);
+        echeance.setHours(0, 0, 0, 0);
+        if (echeance < today) return true;
+      }
+      return false;
+    };
+
+    devisList.forEach((devis) => {
+      const factures = facturesByDevis.get(devis.id) || [];
       factures.forEach((facture) => {
-        totalAmount += facture.totalTTC;
-        // Calculer le montant payé via les paiements
-        const factPaidAmount = facture.paiements.reduce((sum, p) => sum + p.montant, 0);
-        paidAmount += factPaidAmount;
+        paidAmount += facture.paiements.reduce((sum, p) => sum + p.montant, 0);
+        if (checkOverdue(facture)) hasOverduePayment = true;
       });
     });
 
-    // Factures sans devis
     facturesSansDevis.forEach((facture) => {
-      totalAmount += facture.totalTTC;
-      const factPaidAmount = facture.paiements.reduce((sum, p) => sum + p.montant, 0);
-      paidAmount += factPaidAmount;
+      paidAmount += facture.paiements.reduce((sum, p) => sum + p.montant, 0);
+      if (checkOverdue(facture)) hasOverduePayment = true;
     });
 
-    // Taux de recouvrement
-    const recoveryRate = totalAmount > 0 ? (paidAmount / totalAmount) * 100 : 0;
+    const completionRate = totalDevisTTC > 0 ? (paidAmount / totalDevisTTC) * 100 : 0;
 
     return {
       devisCount,
       factureCount,
-      totalAmount,
+      totalDevisTTC,
       paidAmount,
-      recoveryRate,
+      completionRate,
+      hasOverduePayment,
     };
   }, [devisList, facturesByDevis, facturesSansDevis]);
 
@@ -86,11 +111,28 @@ export const ClientRow: React.FC<ClientRowProps> = ({
         <ChevronToggle isOpen={isOpen} onClick={() => setIsOpen((prev) => !prev)} />
         
         <div className="invoicing-row-content invoicing-client-info">
-          <div className="invoicing-client-name">
-            {clientLabel || t('invoicing.gestion.unknownClient')}
-            {client.codeClient && <span className="meta"> • {client.codeClient}</span>}
+          <div className="invoicing-client-main">
+            <div className="invoicing-client-name">
+              {clientStats.hasOverduePayment && (
+                <span
+                  className="invoicing-client-warning"
+                  title={t('invoicing.gestion.overduePayments', 'Paiements en retard')}
+                >
+                  <AlertTriangle size={18} />
+                </span>
+              )}
+              {clientLabel || t('invoicing.gestion.unknownClient')}
+              {client.codeClient && <span className="meta"> • {client.codeClient}</span>}
+            </div>
+            {(client.telephone || client.email || formattedAdresse) && (
+              <div className="invoicing-client-details">
+                {client.telephone && <span>{client.telephone}</span>}
+                {client.email && <span>{client.email}</span>}
+                {formattedAdresse && <span>{formattedAdresse}</span>}
+              </div>
+            )}
           </div>
-          
+
           <div className="invoicing-client-badges">
             <span className="invoicing-client-badge devis">
               {clientStats.devisCount} {t('invoicing.gestion.devis', 'Devis')}
@@ -99,22 +141,22 @@ export const ClientRow: React.FC<ClientRowProps> = ({
               {clientStats.factureCount} {t('invoicing.gestion.factures', 'Factures')}
             </span>
           </div>
-          
-          {clientStats.factureCount > 0 && (
+
+          {clientStats.devisCount > 0 && (
             <div className="invoicing-recovery-container">
               <div className="invoicing-recovery-bar-wrapper">
                 <div className="invoicing-recovery-bar">
-                  <div 
-                    className="invoicing-recovery-progress" 
-                    style={{ width: `${Math.min(clientStats.recoveryRate, 100)}%` }}
+                  <div
+                    className="invoicing-recovery-progress"
+                    style={{ width: `${Math.min(clientStats.completionRate, 100)}%` }}
                   />
                 </div>
                 <span className="invoicing-recovery-label">
-                  {clientStats.paidAmount.toFixed(2)} € / {clientStats.totalAmount.toFixed(2)} €
+                  {clientStats.paidAmount.toFixed(2)} € / {clientStats.totalDevisTTC.toFixed(2)} €
                 </span>
               </div>
               <span className="invoicing-recovery-percent">
-                {clientStats.recoveryRate.toFixed(1)}%
+                {clientStats.completionRate.toFixed(1)}%
               </span>
             </div>
           )}
@@ -137,6 +179,7 @@ export const ClientRow: React.FC<ClientRowProps> = ({
               devis={devis}
               factures={facturesByDevis.get(devis.id) || []}
               transactionsById={transactionsById}
+              clientName={clientLabel || t('invoicing.gestion.unknownClient')}
               onAddFacture={() => onAddFacture(devis)}
               onEditDevis={() => onEditDevis(devis)}
               onDeleteFacture={onDeleteFacture}
@@ -151,6 +194,7 @@ export const ClientRow: React.FC<ClientRowProps> = ({
                   key={facture.id}
                   facture={facture}
                   transactionsById={transactionsById}
+                  clientName={clientLabel || t('invoicing.gestion.unknownClient')}
                   onDeleteFacture={() => onDeleteFacture(facture)}
                   onRefresh={onRefresh}
                 />

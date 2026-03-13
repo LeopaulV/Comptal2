@@ -578,8 +578,9 @@ const Upload: React.FC = () => {
             const startDateObj = parse(config.startDate || '', 'yyyy-MM-dd', new Date());
             const endDateObj = parse(config.endDate || '', 'yyyy-MM-dd', new Date());
             const fileName = `${config.accountCode}_${format(startDateObj, 'dd.MM.yyyy')}_${format(endDateObj, 'dd.MM.yyyy')}.csv`;
+            const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
 
-            await FileService.writeFile(`data/${fileName}`, csvContent);
+            await FileService.writeFile(`${dataDir}/${fileName}`, csvContent);
 
             // Sauvegarder le solde initial
             if (config.startDate) {
@@ -637,8 +638,9 @@ const Upload: React.FC = () => {
         const startDateObj = parse(dateRange.startDate, 'yyyy-MM-dd', new Date());
         const endDateObj = parse(dateRange.endDate, 'yyyy-MM-dd', new Date());
         const fileName = `${selectedAccountCode}_${format(startDateObj, 'dd.MM.yyyy')}_${format(endDateObj, 'dd.MM.yyyy')}.csv`;
+        const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
 
-        await FileService.writeFile(`data/${fileName}`, csvContent);
+        await FileService.writeFile(`${dataDir}/${fileName}`, csvContent);
 
         if (initialBalance !== 0 || balanceFromFile !== null) {
           const balanceToSave = balanceFromFile !== null ? balanceFromFile : initialBalance;

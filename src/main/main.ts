@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, createWriteStream } from 'fs';
+import archiver from 'archiver';
+import extract from 'extract-zip';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -330,10 +332,205 @@ ipcMain.handle('read-directory', async (_, dirPath: string) => {
   }
 });
 
+ipcMain.handle('delete-file', async (_, filePath: string) => {
+  try {
+    const fullPath = path.isAbsolute(filePath) 
+      ? filePath 
+      : path.join(getAppPath(), filePath);
+    
+    if (!existsSync(fullPath)) {
+      const errorMsg = `Fichier non trouvé: ${fullPath}`;
+      console.error('[delete-file]', errorMsg);
+      return { success: false, error: errorMsg };
+    }
+    
+    await fs.unlink(fullPath);
+    console.log('[delete-file] Fichier supprimé avec succès:', fullPath);
+    return { success: true };
+  } catch (error: any) {
+    const errorMsg = `Erreur lors de la suppression du fichier ${filePath}: ${error.message}`;
+    console.error('[delete-file]', errorMsg, error);
+    return { success: false, error: errorMsg };
+  }
+});
+
+ipcMain.handle('delete-directory', async (_, dirPath: string) => {
+  try {
+    const fullPath = path.isAbsolute(dirPath)
+      ? dirPath
+      : path.join(getAppPath(), dirPath);
+
+    if (!existsSync(fullPath)) {
+      return { success: true };
+    }
+
+    await fs.rm(fullPath, { recursive: true });
+    console.log('[delete-directory] Dossier supprimé:', fullPath);
+    return { success: true };
+  } catch (error: any) {
+    const errorMsg = `Erreur lors de la suppression du dossier ${dirPath}: ${error.message}`;
+    console.error('[delete-directory]', errorMsg, error);
+    return { success: false, error: errorMsg };
+  }
+});
+
+ipcMain.handle('copy-directory', async (_, srcPath: string, destPath: string) => {
+  try {
+    const fullSrc = path.isAbsolute(srcPath)
+      ? srcPath
+      : path.join(getAppPath(), srcPath);
+    const fullDest = path.isAbsolute(destPath)
+      ? destPath
+      : path.join(getAppPath(), destPath);
+
+    if (!existsSync(fullSrc)) {
+      const errorMsg = `Dossier source non trouvé: ${fullSrc}`;
+      console.error('[copy-directory]', errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    await fs.mkdir(fullDest, { recursive: true });
+    await fs.cp(fullSrc, fullDest, { recursive: true, force: true });
+    console.log('[copy-directory] Copie réussie:', fullSrc, '->', fullDest);
+    return { success: true };
+  } catch (error: any) {
+    const errorMsg = `Erreur lors de la copie du dossier ${srcPath}: ${error.message}`;
+    console.error('[copy-directory]', errorMsg, error);
+    return { success: false, error: errorMsg };
+  }
+});
+
 ipcMain.handle('get-app-path', async () => {
   const appPath = getAppPath();
   console.log('[get-app-path] Chemin retourné:', appPath);
   return appPath;
+});
+
+// Export d'un profil (parametre + data) vers un fichier .zip
+ipcMain.handle('export-profile', async (_, profileId: string, profileName: string) => {
+  try {
+    if (!mainWindow) {
+      return { success: false, error: 'Fenêtre principale non disponible' };
+    }
+    const appPath = getAppPath();
+    const profileDir = path.join(appPath, 'profiles', profileId);
+    const parametrePath = path.join(profileDir, 'parametre');
+    const dataPath = path.join(profileDir, 'data');
+
+    if (!existsSync(profileDir)) {
+      return { success: false, error: 'Profil non trouvé' };
+    }
+
+    const safeName = (profileName || 'profil').replace(/[^a-zA-Z0-9-_]/g, '_');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const defaultPath = `comptal2-profil-${safeName}-${dateStr}.zip`;
+
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Exporter le profil',
+      defaultPath,
+      filters: [{ name: 'Archive ZIP', extensions: ['zip'] }],
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { success: false, canceled: true };
+    }
+
+    const output = createWriteStream(result.filePath);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+
+    await new Promise<void>((resolve, reject) => {
+      output.on('close', () => resolve());
+      archive.on('error', (err: any) => reject(err));
+      archive.pipe(output);
+
+      if (existsSync(parametrePath)) {
+        archive.directory(parametrePath, 'parametre');
+      }
+      if (existsSync(dataPath)) {
+        archive.directory(dataPath, 'data');
+      }
+
+      archive.finalize();
+    });
+
+    console.log('[export-profile] Export réussi:', result.filePath);
+    return { success: true, path: result.filePath };
+  } catch (error: any) {
+    const errorMsg = `Erreur lors de l'export du profil: ${error.message}`;
+    console.error('[export-profile]', errorMsg, error);
+    return { success: false, error: errorMsg };
+  }
+});
+
+// Import d'un profil depuis un fichier .zip
+ipcMain.handle('import-profile', async (_, zipPath: string, newProfileName: string) => {
+  try {
+    if (!existsSync(zipPath)) {
+      return { success: false, error: 'Fichier non trouvé' };
+    }
+
+    const appPath = getAppPath();
+    const profilesDir = path.join(appPath, 'profiles');
+    const tempDir = path.join(appPath, 'profiles', `.import_temp_${Date.now()}`);
+    const newId = `profile_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const destDir = path.join(profilesDir, newId);
+
+    await fs.mkdir(tempDir, { recursive: true });
+
+    try {
+      await extract(zipPath, { dir: tempDir });
+
+      const hasParametre = existsSync(path.join(tempDir, 'parametre'));
+      const hasData = existsSync(path.join(tempDir, 'data'));
+
+      if (!hasParametre && !hasData) {
+        await fs.rm(tempDir, { recursive: true });
+        return { success: false, error: 'Archive invalide : doit contenir parametre/ et/ou data/' };
+      }
+
+      await fs.mkdir(destDir, { recursive: true });
+
+      if (hasParametre) {
+        await fs.cp(path.join(tempDir, 'parametre'), path.join(destDir, 'parametre'), {
+          recursive: true,
+          force: true,
+        });
+      }
+      if (hasData) {
+        await fs.cp(path.join(tempDir, 'data'), path.join(destDir, 'data'), {
+          recursive: true,
+          force: true,
+        });
+      }
+
+      const profileDataPath = `profiles/${newId}/data`;
+      const settingsPath = path.join(destDir, 'parametre', 'settings.json');
+      if (existsSync(settingsPath)) {
+        const settingsContent = await fs.readFile(settingsPath, 'utf-8');
+        const settings = JSON.parse(settingsContent);
+        settings.dataDirectory = profileDataPath;
+        await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+      }
+
+      const info = {
+        id: newId,
+        name: newProfileName || 'Profil importé',
+        description: 'Importé depuis une archive',
+        createdAt: new Date().toISOString(),
+        lastSaved: new Date().toISOString(),
+      };
+      await fs.writeFile(path.join(destDir, 'info.json'), JSON.stringify(info, null, 2));
+
+      console.log('[import-profile] Import réussi:', newId);
+      return { success: true, profileId: newId };
+    } finally {
+      await fs.rm(tempDir, { recursive: true }).catch(() => {});
+    }
+  } catch (error: any) {
+    const errorMsg = `Erreur lors de l'import du profil: ${error.message}`;
+    console.error('[import-profile]', errorMsg, error);
+    return { success: false, error: errorMsg };
+  }
 });
 
 // Handler pour sélectionner un dossier

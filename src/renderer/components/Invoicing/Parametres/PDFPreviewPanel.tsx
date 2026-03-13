@@ -6,12 +6,35 @@ import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { EmetteurExtended, PDFTemplate } from '../../../types/Invoice';
 import { PDFTemplateService } from '../../../services/PDFTemplateService';
 import { LegalMentionsService } from '../../../services/LegalMentionsService';
-import { ensurePdfMakeFonts } from '../../../services/PDFService';
 
 interface PDFPreviewPanelProps {
   emetteur: EmetteurExtended;
   activeDocumentType?: 'devis' | 'facture';
 }
+
+// Initialisation des fonts pdfmake
+let fontsLoaded = false;
+const loadFonts = async () => {
+  if (fontsLoaded) return;
+  try {
+    const pdfFonts = await import('pdfmake/build/vfs_fonts');
+    if (pdfFonts && (pdfFonts as any).default) {
+      const fonts = (pdfFonts as any).default;
+      if (fonts.pdfMake && fonts.pdfMake.vfs) {
+        (pdfMake as any).vfs = fonts.pdfMake.vfs;
+        fontsLoaded = true;
+      } else if (fonts.vfs) {
+        (pdfMake as any).vfs = fonts.vfs;
+        fontsLoaded = true;
+      }
+    } else if ((pdfFonts as any).pdfMake && (pdfFonts as any).pdfMake.vfs) {
+      (pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
+      fontsLoaded = true;
+    }
+  } catch (error) {
+    console.warn('Impossible de charger les fonts pdfmake:', error);
+  }
+};
 
 export const PDFPreviewPanel: React.FC<PDFPreviewPanelProps> = ({
   emetteur,
@@ -111,14 +134,17 @@ export const PDFPreviewPanel: React.FC<PDFPreviewPanelProps> = ({
         headerSection = { stack: headerContent };
       }
 
-      // Exemple de postes pour la prévisualisation
+      // Exemple de postes pour la prévisualisation (matériel + service)
       const samplePostes = [
-        { designation: 'Prestation de service', qte: 1, prixHT: 500, tva: 20 },
-        { designation: 'Consultation', qte: 2, prixHT: 150, tva: 20 },
+        { designation: 'Fourniture matériel', qte: 15, unite: 'm²', prixHT: 10, tva: 20, coef: 1 },
+        { designation: 'Prestation de service', qte: 8, unite: 'h (×2 interv.)', prixHT: 25, tva: 20, coef: 2 },
       ];
 
-      const totalHT = samplePostes.reduce((sum, p) => sum + p.qte * p.prixHT, 0);
-      const totalTVA = samplePostes.reduce((sum, p) => sum + (p.qte * p.prixHT * p.tva) / 100, 0);
+      const totalHT = samplePostes.reduce((sum, p) => sum + p.qte * p.prixHT * (p.coef || 1), 0);
+      const totalTVA = samplePostes.reduce(
+        (sum, p) => sum + (p.qte * p.prixHT * (p.coef || 1) * p.tva) / 100,
+        0
+      );
       const totalTTC = totalHT + totalTVA;
 
       // Convertir le format en majuscules pour pdfmake (LETTER au lieu de Letter)
@@ -155,29 +181,39 @@ export const PDFPreviewPanel: React.FC<PDFPreviewPanelProps> = ({
           {
             table: {
               headerRows: 1,
-              widths: ['*', 'auto', 'auto', 'auto', 'auto'],
+              widths: ['*', 'auto', 'auto', 'auto', 'auto', 'auto'],
               body: [
                 [
                   { text: 'Désignation', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
                   { text: 'Qté', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
+                  { text: 'Unité', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
                   { text: 'Prix U. HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
                   { text: 'TVA', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
                   { text: 'Total HT', style: 'tableHeader', fillColor: colors.primary, color: '#ffffff' },
                 ],
                 ...samplePostes.map((p) => [
                   p.designation,
-                  p.qte.toString(),
-                  formatCurrency(p.prixHT),
-                  `${p.tva}%`,
-                  formatCurrency(p.qte * p.prixHT),
+                  { text: p.qte.toString(), alignment: 'right' as const },
+                  { text: p.unite, alignment: 'center' as const },
+                  { text: formatCurrency(p.prixHT), alignment: 'right' as const },
+                  { text: `${p.tva}%`, alignment: 'right' as const },
+                  {
+                    text: formatCurrency(p.qte * p.prixHT * (p.coef || 1)),
+                    alignment: 'right' as const,
+                  },
                 ]),
               ],
             },
             layout: {
-              hLineWidth: () => 0.5,
-              vLineWidth: () => 0.5,
-              hLineColor: () => colors.border,
-              vLineColor: () => colors.border,
+              hLineWidth: (i: number, node: any) =>
+                i === 0 || i === 1 || i === node.table.body.length ? 0.75 : 0.25,
+              vLineWidth: () => 0.25,
+              hLineColor: () => colors.border || '#e5e7eb',
+              vLineColor: () => colors.border || '#e5e7eb',
+              fillColor: (rowIndex: number) => {
+                if (rowIndex === 0) return colors.primary;
+                return rowIndex % 2 === 1 ? '#f8fafc' : null;
+              },
             },
           },
           { text: '\n' },
@@ -223,7 +259,7 @@ export const PDFPreviewPanel: React.FC<PDFPreviewPanelProps> = ({
     setError(null);
 
     try {
-      await ensurePdfMakeFonts();
+      await loadFonts();
 
       // Charger le template sélectionné
       const templateId =

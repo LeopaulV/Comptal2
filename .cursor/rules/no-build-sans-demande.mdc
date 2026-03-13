@@ -1,0 +1,12 @@
+---
+description: Ne pas lancer npm run build sans demande explicite
+alwaysApply: true
+---
+
+# Règle : pas de build sans demande
+
+Ne jamais exécuter `npm run build` (ou toute commande de build équivalente) sans que l'utilisateur ne le demande explicitement.
+
+- Ne pas lancer le build pour "vérifier que tout compile"
+- Ne pas lancer le build à la fin d'une série de modifications
+- Lancer le build uniquement si l'utilisateur le demande ou le confirme

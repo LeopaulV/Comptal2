@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PosteFacture, PosteGroupe } from '../../../types/Invoice';
-import { PosteService } from '../../../services/PosteService';
+import { usePosteService } from '../../../contexts/PosteServiceContext';
 
 interface PosteGroupeModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface PosteGroupeModalProps {
 
 export const PosteGroupeModal: React.FC<PosteGroupeModalProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
+  const posteService = usePosteService();
   const [nom, setNom] = useState('');
   const [description, setDescription] = useState('');
   const [postes, setPostes] = useState<PosteFacture[]>([]);
@@ -19,11 +20,11 @@ export const PosteGroupeModal: React.FC<PosteGroupeModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (!isOpen) return;
     const load = async () => {
-      const loaded = await PosteService.loadPostes();
+      const loaded = await posteService.loadPostes();
       setPostes(loaded);
     };
     load();
-  }, [isOpen]);
+  }, [isOpen, posteService]);
 
   const groupedPostes = useMemo(() => {
     return {
@@ -51,7 +52,7 @@ export const PosteGroupeModal: React.FC<PosteGroupeModalProps> = ({ isOpen, onCl
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await PosteService.savePosteGroupe(groupe);
+    await posteService.savePosteGroupe(groupe);
     window.dispatchEvent(new CustomEvent('postes-groupes-updated'));
     setNom('');
     setDescription('');
@@ -101,7 +102,7 @@ export const PosteGroupeModal: React.FC<PosteGroupeModalProps> = ({ isOpen, onCl
               )}
             </div>
             <div>
-              <h4>{t('invoicing.postes.travailTitle')}</h4>
+              <h4>{t('invoicing.postes.servicesTitle')}</h4>
               {groupedPostes.travail.map((poste) => (
                 <label key={poste.id} className="invoicing-checkbox">
                   <input

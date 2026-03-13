@@ -28,7 +28,7 @@ const ProjectSelector: React.FC<ProjectSelectorProps> = ({
 
   const loadProjects = async () => {
     try {
-      const projectsConfig = await ConfigService.loadProjects();
+      const projectsConfig = await ConfigService.loadSelectableProjects();
       setProjects(projectsConfig);
       
       // Si aucun projet n'est sélectionné et qu'il y a des projets, sélectionner le premier
