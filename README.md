@@ -105,5 +105,55 @@ npm run build:linux
 # Build pour toutes les plateformes
 npm run build:all
 ```
-
 ## Structure du projet
+
+```
+Comptal2/
+├── src/
+│   ├── main/                    # Processus principal Electron
+│   │   ├── main.ts              # Point d'entrée, fenêtre, IPC
+│   │   └── preload.ts           # Bridge sécurisé main ↔ renderer
+│   │
+│   └── renderer/                # Interface React (fenêtre applicative)
+│       ├── components/         # Composants réutilisables
+│       │   ├── Association/    # Donateurs, reçus, graphiques association
+│       │   ├── Common/         # Boutons, cartes, filtres, tableaux
+│       │   ├── Dashboard/      # Stats, graphiques, recherche tableau de bord
+│       │   ├── Edition/        # Table des transactions, filtres, catégories
+│       │   ├── FinanceGlobal/  # Bilan, graphiques finance globale
+│       │   ├── Invoicing/      # Facturation (devis, factures, clients, postes, stock)
+│       │   ├── Layout/         # Sidebar, structure principale
+│       │   ├── Onboarding/     # Visite guidée première utilisation
+│       │   ├── Parametre/      # Comptes, catégories, palettes, profils
+│       │   ├── ProjectManagement/  # Projets, projections, graphiques
+│       │   └── Upload/         # Import CSV/Excel, mapping colonnes
+│       ├── pages/               # Pages / routes de l'application
+│       │   ├── Association/
+│       │   ├── Dashboard/
+│       │   ├── Edition/
+│       │   ├── FinanceGlobal/
+│       │   ├── Invoicing/
+│       │   ├── Parametre/
+│       │   ├── ProjectManagement/
+│       │   └── Upload/
+│       ├── services/            # Logique métier, accès données, API
+│       ├── contexts/            # Contexte React (thème, zoom, postes…)
+│       ├── hooks/               # Hooks personnalisés
+│       ├── i18n/                # Traductions (fr, en)
+│       ├── styles/              # CSS global et par module
+│       ├── types/               # Types TypeScript
+│       ├── utils/               # Helpers (dates, format, etc.)
+│       ├── main.tsx             # Point d'entrée React
+│       └── index.css            # Styles globaux
+│
+├── build/                       # Fichiers par défaut (paramètres, données)
+├── data/                        # Données utilisateur (transactions)
+├── parametre/                   # Paramètres (comptes, catégories, profils)
+├── profiles/                    # Profils utilisateur (multi-comptes / contextes)
+├── scripts/                     # Scripts de build et déploiement
+├── index.html                   # Point d'entrée HTML
+└── package.json
+```
+
+**Dossiers générés** (à ne pas versionner ou ignorer) : `node_modules/`, `dist/`, `dist-electron/`, `release/` (artefacts de build).
+
