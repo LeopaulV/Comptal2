@@ -27,6 +27,14 @@ body {
   overflow: hidden;
 }
 
+/* Enfant du wrapper zoom : remplit la hauteur disponible au dézoom, sans dépasser la fenêtre */
+.main-zoom-content > * {
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
 /* Scrollbar personnalisé */
 ::-webkit-scrollbar {
   width: 8px;

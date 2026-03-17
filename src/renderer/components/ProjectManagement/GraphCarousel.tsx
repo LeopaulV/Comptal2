@@ -121,8 +121,9 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
         </>
       )}
 
-      {/* Conteneur des pages */}
-      <div className="graph-carousel-track" style={{ transform: `translateX(-${currentPage * 50}%)` }}>
+      {/* Viewport : contraint la zone visible et permet l'adaptation au conteneur */}
+      <div className="graph-carousel-viewport">
+        <div className="graph-carousel-track" style={{ transform: `translateX(-${currentPage * 50}%)` }}>
         {/* Page 1 : Boxes info + 2 premiers graphiques */}
         <div className="graph-carousel-page">
           <div className="graph-page-content">
@@ -228,6 +229,7 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 

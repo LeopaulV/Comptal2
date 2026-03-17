@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, ChevronRight } from 'lucide-react';
+import { X, Check, ChevronRight, Plus } from 'lucide-react';
 import { ExcelSheetInfo } from '../../types/ExcelImport';
 import { AccountsConfig } from '../../types/Account';
 import { Button } from '../Common';
@@ -11,6 +11,7 @@ interface ExcelSheetSelectorProps {
   sheets: ExcelSheetInfo[];
   accounts: AccountsConfig;
   onConfirm: (selectedSheets: Map<string, string>) => void; // Map: sheetName -> accountCode
+  onOpenCreateAccount?: () => void;
 }
 
 const ExcelSheetSelector: React.FC<ExcelSheetSelectorProps> = ({
@@ -19,6 +20,7 @@ const ExcelSheetSelector: React.FC<ExcelSheetSelectorProps> = ({
   sheets,
   accounts,
   onConfirm,
+  onOpenCreateAccount,
 }) => {
   const { t } = useTranslation();
   const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
@@ -82,12 +84,24 @@ const ExcelSheetSelector: React.FC<ExcelSheetSelectorProps> = ({
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             {t('excelSheet.title')}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenCreateAccount && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Plus size={16} />}
+                onClick={onOpenCreateAccount}
+              >
+                {t('upload.createAccount', 'Créer un nouveau compte')}
+              </Button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-4">

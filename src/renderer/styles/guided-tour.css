@@ -12,16 +12,6 @@
   }
 }
 
-/* Animation de flottement pour les cartes */
-@keyframes float-card {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
 /* Animation d'apparition */
 @keyframes fade-in {
   from {
@@ -69,80 +59,6 @@
   transition: all 0.3s ease;
 }
 
-/* Carte flottante avec instructions */
-.tour-step-card {
-  position: fixed;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  padding: 20px;
-  max-width: 320px;
-  z-index: 9999;
-  animation: fade-in 0.3s ease, float-card 3s ease-in-out infinite;
-  pointer-events: auto;
-}
-
-.tour-step-card.dark {
-  background: #1f2937;
-  color: white;
-}
-
-/* Flèche pointant vers l'élément */
-.tour-arrow {
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-style: solid;
-}
-
-.tour-arrow.top {
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 0 12px 12px 12px;
-  border-color: transparent transparent white transparent;
-}
-
-.tour-arrow.top.dark {
-  border-color: transparent transparent #1f2937 transparent;
-}
-
-.tour-arrow.bottom {
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 12px 12px 0 12px;
-  border-color: white transparent transparent transparent;
-}
-
-.tour-arrow.bottom.dark {
-  border-color: #1f2937 transparent transparent transparent;
-}
-
-.tour-arrow.left {
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  border-width: 12px 12px 12px 0;
-  border-color: transparent white transparent transparent;
-}
-
-.tour-arrow.left.dark {
-  border-color: transparent #1f2937 transparent transparent;
-}
-
-.tour-arrow.right {
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  border-width: 12px 0 12px 12px;
-  border-color: transparent transparent transparent white;
-}
-
-.tour-arrow.right.dark {
-  border-color: transparent transparent transparent #1f2937;
-}
-
 /* Notification en bas à droite */
 .tour-notification {
   position: fixed;
@@ -163,13 +79,35 @@
   color: white;
 }
 
+/* Poignée de déplacement */
+.tour-notification-drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+
+.tour-notification-drag-handle:active {
+  cursor: grabbing;
+}
+
+.tour-notification-dragging .tour-notification-drag-handle {
+  cursor: grabbing;
+}
+
+.tour-notification-grip-icon {
+  opacity: 0.5;
+  color: #6b7280;
+}
+
+.tour-notification-drag-handle:hover .tour-notification-grip-icon {
+  opacity: 0.8;
+}
+
+.tour-notification.dark .tour-notification-grip-icon {
+  color: #9ca3af;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-  .tour-step-card {
-    max-width: calc(100vw - 48px);
-    margin: 0 24px;
-  }
-
   .tour-notification {
     max-width: calc(100vw - 48px);
     right: 24px;

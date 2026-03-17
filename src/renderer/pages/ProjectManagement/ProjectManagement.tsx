@@ -256,7 +256,7 @@ const ProjectManagement: React.FC = () => {
       </div>
 
       {currentProject ? (
-        <>
+        <div className="project-management-main">
           {/* PARTIE HAUTE : Carrousel de graphiques */}
           <GraphCarousel 
             projectionData={projectionData}
@@ -282,7 +282,7 @@ const ProjectManagement: React.FC = () => {
               />
             </div>
           </div>
-        </>
+        </div>
       ) : (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <p>{t('projectManagement.noProject', 'Aucun projet sélectionné. Créez un nouveau projet pour commencer.')}</p>

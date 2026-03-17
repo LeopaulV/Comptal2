@@ -3,7 +3,7 @@
 import Papa from 'papaparse';
 import { FileService } from './FileService';
 import { ConfigService } from './ConfigService';
-import { EditionRow, EditionData } from '../types/Edition';
+import { EditionRow, EditionData, DuplicateRowEntry } from '../types/Edition';
 import { parse, isValid } from 'date-fns';
 import { AutoCategorisationService } from './AutoCategorisationService';
 
@@ -677,6 +677,150 @@ export class EditionService {
       console.error('Erreur lors du nettoyage des fichiers:', error);
       throw new Error(`Erreur lors du nettoyage: ${error.message}`);
     }
+  }
+
+  /**
+   * Retourne la liste des lignes en doublon (à supprimer) pour affichage dans la modale.
+   * Pour chaque groupe de doublons, la première occurrence est conservée, les suivantes sont listées.
+   */
+  static async getDuplicatesPreview(): Promise<{
+    duplicates: DuplicateRowEntry[];
+    inconsistenciesCount: number;
+  }> {
+    const settings = await ConfigService.loadSettings();
+    const dataDirectory = settings.dataDirectory || 'data';
+    const files = await FileService.readDirectory(dataDirectory);
+    const csvFiles = files.filter(file => file.endsWith('.csv'));
+    const bankAccounts = await ConfigService.loadAccounts();
+
+    const duplicates: DuplicateRowEntry[] = [];
+    let inconsistenciesCount = 0;
+
+    for (const fileName of csvFiles) {
+      try {
+        const filePath = `${dataDirectory}/${fileName}`;
+        const content = await FileService.readFile(filePath);
+        const result = await new Promise<any>((resolve) => {
+          Papa.parse(content, {
+            header: true,
+            delimiter: this.DELIMITER,
+            skipEmptyLines: true,
+            complete: resolve,
+          });
+        });
+
+        const rows = result.data as any[];
+        const prefix = this.extractAccountPrefix(fileName);
+        if (!(prefix in bankAccounts)) continue;
+
+        const accountData = bankAccounts[prefix];
+        const expectedAccount =
+          typeof accountData === 'object' && accountData !== null && 'name' in accountData
+            ? accountData.name
+            : String(accountData || prefix);
+
+        const seen = new Set<string>();
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const key = `${row.Date}|${row['Date de valeur']}|${row.Libellé}|${row.Débit}|${row.Crédit}`;
+          if (row.Compte !== expectedAccount) inconsistenciesCount++;
+          if (seen.has(key)) {
+            duplicates.push({
+              id: `${fileName}|${i}`,
+              fileName,
+              rowIndex: i,
+              row: { ...row },
+            });
+          } else {
+            seen.add(key);
+          }
+        }
+      } catch (error: any) {
+        console.error(`[EditionService] Erreur getDuplicatesPreview ${fileName}:`, error);
+      }
+    }
+
+    return { duplicates, inconsistenciesCount };
+  }
+
+  /**
+   * Supprime les doublons sélectionnés (ids au format "fileName|rowIndex") et corrige Compte/Source.
+   */
+  static async removeSelectedDuplicates(ids: string[]): Promise<{
+    removed: number;
+    filesProcessed: number;
+    inconsistenciesFixed: number;
+  }> {
+    if (ids.length === 0) {
+      return { removed: 0, filesProcessed: 0, inconsistenciesFixed: 0 };
+    }
+
+    const byFile = new Map<string, Set<number>>();
+    for (const id of ids) {
+      const lastPipe = id.lastIndexOf('|');
+      if (lastPipe === -1) continue;
+      const fileName = id.slice(0, lastPipe);
+      const rowIndex = parseInt(id.slice(lastPipe + 1), 10);
+      if (isNaN(rowIndex)) continue;
+      if (!byFile.has(fileName)) byFile.set(fileName, new Set());
+      byFile.get(fileName)!.add(rowIndex);
+    }
+
+    const settings = await ConfigService.loadSettings();
+    const dataDirectory = settings.dataDirectory || 'data';
+    const bankAccounts = await ConfigService.loadAccounts();
+
+    let removed = 0;
+    let filesProcessed = 0;
+    let inconsistenciesFixed = 0;
+
+    for (const [fileName, indicesToRemove] of byFile) {
+      try {
+        const filePath = `${dataDirectory}/${fileName}`;
+        const content = await FileService.readFile(filePath);
+        const result = await new Promise<any>((resolve) => {
+          Papa.parse(content, {
+            header: true,
+            delimiter: this.DELIMITER,
+            skipEmptyLines: true,
+            complete: resolve,
+          });
+        });
+
+        const rows = result.data as any[];
+        const prefix = this.extractAccountPrefix(fileName);
+        if (!(prefix in bankAccounts)) continue;
+
+        const accountData = bankAccounts[prefix];
+        const expectedAccount =
+          typeof accountData === 'object' && accountData !== null && 'name' in accountData
+            ? accountData.name
+            : String(accountData || prefix);
+
+        const kept = rows
+          .map((row, i) => {
+            if (indicesToRemove.has(i)) {
+              removed++;
+              return null;
+            }
+            if (row.Compte !== expectedAccount) {
+              inconsistenciesFixed++;
+              row.Compte = expectedAccount;
+            }
+            row.Source = fileName;
+            return row;
+          })
+          .filter(Boolean);
+
+        const csv = Papa.unparse(kept, { delimiter: this.DELIMITER, header: true });
+        await FileService.writeFile(filePath, csv);
+        filesProcessed++;
+      } catch (error: any) {
+        console.error(`[EditionService] Erreur removeSelectedDuplicates ${fileName}:`, error);
+      }
+    }
+
+    return { removed, filesProcessed, inconsistenciesFixed };
   }
 
   /**

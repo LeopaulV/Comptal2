@@ -20,12 +20,18 @@ interface ManualDataCreatorProps {
   accounts: AccountsConfig;
   onConfirm: (rows: TransformedRow[], accountCode: string, initialBalance: number) => void;
   onCancel: () => void;
+  onOpenCreateAccount?: () => void;
+  newlyCreatedAccountCode?: string | null;
+  onClearNewlyCreated?: () => void;
 }
 
 const ManualDataCreator: React.FC<ManualDataCreatorProps> = ({
   accounts,
   onConfirm,
   onCancel,
+  onOpenCreateAccount,
+  newlyCreatedAccountCode,
+  onClearNewlyCreated,
 }) => {
   const { t } = useTranslation();
   const [selectedAccountCode, setSelectedAccountCode] = useState<string>('');
@@ -36,6 +42,14 @@ const ManualDataCreator: React.FC<ManualDataCreatorProps> = ({
 
   // Générer un ID unique pour chaque ligne
   const generateRowId = () => `row-${Date.now()}-${Math.random()}`;
+
+  // Appliquer le compte nouvellement créé depuis la modal parente
+  useEffect(() => {
+    if (newlyCreatedAccountCode) {
+      setSelectedAccountCode(newlyCreatedAccountCode);
+      onClearNewlyCreated?.();
+    }
+  }, [newlyCreatedAccountCode, onClearNewlyCreated]);
 
   // Récupérer le solde initial quand le compte est sélectionné
   useEffect(() => {
@@ -249,18 +263,28 @@ const ManualDataCreator: React.FC<ManualDataCreatorProps> = ({
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
             {t('upload.manualCreate.selectAccount')} *
           </label>
-          <select
-            value={selectedAccountCode}
-            onChange={(e) => setSelectedAccountCode(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="">{t('upload.selectAccountPlaceholder')}</option>
-            {Object.entries(accounts).map(([code, account]) => (
-              <option key={code} value={code}>
-                {code} - {account.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            <select
+              value={selectedAccountCode}
+              onChange={(e) => setSelectedAccountCode(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">{t('upload.selectAccountPlaceholder')}</option>
+              {Object.entries(accounts).map(([code, account]) => (
+                <option key={code} value={code}>
+                  {code} - {account.name}
+                </option>
+              ))}
+            </select>
+            {onOpenCreateAccount && (
+              <Button
+                variant="secondary"
+                onClick={onOpenCreateAccount}
+              >
+                {t('upload.createAccount', 'Créer un nouveau compte')}
+              </Button>
+            )}
+          </div>
           {errors.account && (
             <p className="text-sm text-red-600 dark:text-red-400 mt-1">{errors.account}</p>
           )}

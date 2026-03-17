@@ -327,11 +327,12 @@ const Parametre: React.FC = () => {
               </label>
               <select 
                 value={currentLanguage}
-                onChange={(e) => changeLanguage(e.target.value as 'fr' | 'en')}
+                onChange={(e) => changeLanguage(e.target.value as 'fr' | 'en' | 'de')}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                 <option value="fr">Français</option>
                 <option value="en">English</option>
+                <option value="de">Deutsch</option>
               </select>
             </div>
 

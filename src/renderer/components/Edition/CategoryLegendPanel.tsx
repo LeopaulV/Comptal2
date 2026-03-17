@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft, faChevronRight, faEdit, faTrash, faSave, faTimes, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { CategoriesConfig } from '../../types/Category';
 import { ConfigService } from '../../services/ConfigService';
+import { ConfirmModal } from '../Common';
 
 interface CategoryLegendPanelProps {
   isCollapsed: boolean;
@@ -20,6 +22,7 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
   const [editedCategory, setEditedCategory] = useState<{ name: string; color: string } | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newCategory, setNewCategory] = useState({ code: '', name: '', color: '#0ea5e9' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ code: string; name: string } | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -59,16 +62,21 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
     setEditedCategory(null);
   };
 
-  const handleDelete = async (code: string) => {
-    if (code === 'X') return; // Ne pas permettre la suppression de X
-    if (confirm(`Êtes-vous sûr de vouloir supprimer la catégorie "${categories[code].name}" ?`)) {
-      const { [code]: deleted, ...rest } = categories;
-      await ConfigService.saveCategories(rest);
-      ConfigService.clearCache(); // Invalider le cache pour forcer le rechargement
-      setCategories(rest);
-      if (onCategoriesChange) {
-        onCategoriesChange();
-      }
+  const handleDeleteClick = (code: string) => {
+    if (code === 'X') return;
+    setDeleteConfirm({ code, name: categories[code].name });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+    const { code } = deleteConfirm;
+    setDeleteConfirm(null);
+    const { [code]: deleted, ...rest } = categories;
+    await ConfigService.saveCategories(rest);
+    ConfigService.clearCache();
+    setCategories(rest);
+    if (onCategoriesChange) {
+      onCategoriesChange();
     }
   };
 
@@ -76,12 +84,12 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
     const code = newCategory.code.trim().toUpperCase();
     
     if (!code || !newCategory.name) {
-      alert('Veuillez remplir tous les champs');
+      toast.warning('Veuillez remplir tous les champs');
       return;
     }
 
     if (categories[code]) {
-      alert('Ce code de catégorie existe déjà');
+      toast.warning('Ce code de catégorie existe déjà');
       return;
     }
 
@@ -218,7 +226,7 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
                         )}
                         {canEdit && (
                           <button
-                            onClick={() => handleDelete(code)}
+                            onClick={() => handleDeleteClick(code)}
                             className="action-btn delete-btn"
                             title="Supprimer"
                           >
@@ -292,6 +300,21 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
           </button>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteConfirm !== null}
+        title="Supprimer la catégorie"
+        message={
+          deleteConfirm
+            ? `Êtes-vous sûr de vouloir supprimer la catégorie "${deleteConfirm.name}" ?`
+            : ''
+        }
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 };

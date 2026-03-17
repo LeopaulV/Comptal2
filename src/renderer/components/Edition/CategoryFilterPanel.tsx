@@ -8,18 +8,20 @@ interface CategoryFilterPanelProps {
   selectedCategories: string[];
   showUncategorized: boolean;
   onCategoryFilterChange: (categories: string[], showUncategorized: boolean) => void;
+  categoriesRefreshKey?: number;
 }
 
 const CategoryFilterPanel: React.FC<CategoryFilterPanelProps> = ({
   selectedCategories,
   showUncategorized,
   onCategoryFilterChange,
+  categoriesRefreshKey = 0,
 }) => {
   const [categories, setCategories] = useState<CategoriesConfig>({});
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [categoriesRefreshKey]);
 
   const loadCategories = async () => {
     try {

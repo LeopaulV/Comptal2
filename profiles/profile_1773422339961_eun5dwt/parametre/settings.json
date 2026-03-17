@@ -3,7 +3,7 @@
   "language": "fr",
   "currency": "€",
   "dateFormat": "DD/MM/YYYY",
-  "dataDirectory": "profiles/profile_1773422339961_eun5dwt/data",
+  "dataDirectory": "./data",
   "autoSave": true,
   "showBalance": true,
   "defaultView": "dashboard",

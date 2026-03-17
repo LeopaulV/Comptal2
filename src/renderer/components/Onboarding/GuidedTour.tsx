@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../hooks/useOnboarding';
 import { useElementObserver } from '../../hooks/useElementObserver';
 import ElementHighlight from './ElementHighlight';
-import TourStep from './TourStep';
 import TourNotification from './TourNotification';
 import { tourSteps } from '../../config/tourSteps';
 
@@ -111,18 +110,7 @@ const GuidedTour: React.FC = () => {
         visible={elementExists && !tourState.isPaused}
       />
 
-      {/* Carte flottante avec instructions */}
-      {elementExists && !tourState.isPaused && (
-        <TourStep
-          title={t(currentStep.titleKey)}
-          description={t(currentStep.descriptionKey)}
-          elementRect={elementRect}
-          position={currentStep.position}
-          visible={true}
-        />
-      )}
-
-      {/* Notification en bas à droite */}
+      {/* Notification déplaçable en bas à droite */}
       <TourNotification
         currentStep={tourState.currentStepIndex + 1}
         totalSteps={tourSteps.length}

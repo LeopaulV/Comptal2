@@ -12,6 +12,7 @@
 
 .association-content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -400,7 +401,8 @@ html.dark .association-form-status.error {
    Limite la hauteur et permet aux deux graphiques de la page Répartition de rester visibles.
    ============================================ */
 .association-page .invoicing-carousel-container {
-  max-height: min(72vh, 580px);
+  flex: 1;
+  max-height: min(90vh, 100%);
   min-height: 320px;
   display: flex;
   flex-direction: column;

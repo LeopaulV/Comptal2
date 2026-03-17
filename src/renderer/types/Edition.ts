@@ -24,3 +24,11 @@ export interface EditionData {
   ignoredFiles?: Array<{ fileName: string; accountCode: string }>; // Fichiers ignorés car le compte n'existe pas
 }
 
+/** Entrée doublon pour la modale de nettoyage (une ligne à supprimer) */
+export interface DuplicateRowEntry {
+  id: string;
+  fileName: string;
+  rowIndex: number;
+  row: Record<string, any>;
+}
+

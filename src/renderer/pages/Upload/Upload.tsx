@@ -7,6 +7,8 @@ import ColumnMappingInterface from '../../components/Upload/ColumnMappingInterfa
 import ExcelSheetSelector from '../../components/Upload/ExcelSheetSelector';
 import ImportPreviewTable from '../../components/Upload/ImportPreviewTable';
 import ManualDataCreator from '../../components/Upload/ManualDataCreator';
+import CreateAccountModal from '../../components/Upload/CreateAccountModal';
+import ImportHelpModal from '../../components/Upload/ImportHelpModal';
 import { FileDetectionService } from '../../services/FileDetectionService';
 import { ColumnMappingService } from '../../services/ColumnMappingService';
 import { CSVTransformService } from '../../services/CSVTransformService';
@@ -51,6 +53,10 @@ const Upload: React.FC = () => {
   const [currentSheetName, setCurrentSheetName] = useState<string>('');
 
   const [accounts, setAccounts] = useState<AccountsConfig>({});
+  const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
+  const [showImportHelpModal, setShowImportHelpModal] = useState(false);
+  const [createAccountContext, setCreateAccountContext] = useState<'csv' | 'excel' | 'manual' | null>(null);
+  const [newlyCreatedAccountCode, setNewlyCreatedAccountCode] = useState<string | null>(null);
 
   // Charger les comptes au montage
   useEffect(() => {
@@ -65,6 +71,18 @@ const Upload: React.FC = () => {
     loadAccounts();
   }, []);
 
+  const handleCreateAccountCreated = async (code: string) => {
+    const updated = await ConfigService.loadAccounts();
+    setAccounts(updated);
+    if (createAccountContext === 'csv') {
+      setSelectedAccountCode(code);
+    } else if (createAccountContext === 'manual') {
+      setNewlyCreatedAccountCode(code);
+    }
+    setShowCreateAccountModal(false);
+    setCreateAccountContext(null);
+  };
+
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
     
@@ -78,7 +96,7 @@ const Upload: React.FC = () => {
       type: file.type || 'non spécifié'
     });
 
-5    // Détecter si c'est un fichier Excel
+    // Détecter si c'est un fichier Excel
     const fileType = FileDetectionService.detectFileType(file.name);
     const isExcelFile = fileType === 'excel';
     setIsExcel(isExcelFile);
@@ -830,6 +848,12 @@ const Upload: React.FC = () => {
           accounts={accounts}
           onConfirm={handleManualCreateConfirm}
           onCancel={handleReset}
+          onOpenCreateAccount={() => {
+            setCreateAccountContext('manual');
+            setShowCreateAccountModal(true);
+          }}
+          newlyCreatedAccountCode={newlyCreatedAccountCode}
+          onClearNewlyCreated={() => setNewlyCreatedAccountCode(null)}
         />
       )}
 
@@ -851,6 +875,10 @@ const Upload: React.FC = () => {
               sheets={excelSheets}
               accounts={accounts}
               onConfirm={handleExcelSheetsConfirm}
+              onOpenCreateAccount={() => {
+                setCreateAccountContext('excel');
+                setShowCreateAccountModal(true);
+              }}
             />
           )}
         </>
@@ -931,18 +959,29 @@ const Upload: React.FC = () => {
               <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                 {t('upload.accountRequired')}
               </label>
-              <select
-                value={selectedAccountCode}
-                onChange={(e) => setSelectedAccountCode(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">{t('upload.selectAccountPlaceholder')}</option>
-                {Object.entries(accounts).map(([code, account]) => (
-                  <option key={code} value={code}>
-                    {code} - {account.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={selectedAccountCode}
+                  onChange={(e) => setSelectedAccountCode(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">{t('upload.selectAccountPlaceholder')}</option>
+                  {Object.entries(accounts).map(([code, account]) => (
+                    <option key={code} value={code}>
+                      {code} - {account.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setCreateAccountContext('csv');
+                    setShowCreateAccountModal(true);
+                  }}
+                >
+                  {t('upload.createAccount', 'Créer un nouveau compte')}
+                </Button>
+              </div>
             </div>
 
             <div className="flex gap-4 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -1102,8 +1141,30 @@ const Upload: React.FC = () => {
             {t('upload.acceptedFormats')}
             {isExcel && t('upload.excelMultiSheet')}
           </p>
+          <button
+            type="button"
+            onClick={() => setShowImportHelpModal(true)}
+            className="mt-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
+          >
+            {t('upload.importHelp.link')}
+          </button>
         </div>
       )}
+
+      <CreateAccountModal
+        isOpen={showCreateAccountModal}
+        onClose={() => {
+          setShowCreateAccountModal(false);
+          setCreateAccountContext(null);
+        }}
+        onCreated={handleCreateAccountCreated}
+        existingAccounts={accounts}
+      />
+
+      <ImportHelpModal
+        isOpen={showImportHelpModal}
+        onClose={() => setShowImportHelpModal(false)}
+      />
     </div>
   );
 };

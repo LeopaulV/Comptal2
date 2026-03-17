@@ -3,18 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { useDebounce } from 'use-debounce';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSave, faMagic, faTags, faFilter, faSearch, faCheckCircle, faTrashAlt, faChevronLeft, faChevronRight, faExclamationTriangle, faCircleNotch, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { faSave, faMagic, faTags, faFilter, faSearch, faCheckCircle, faBroom, faChevronLeft, faChevronRight, faExclamationTriangle, faCircleNotch, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 import { Loading, EmptyState } from '../../components/Common';
 import SourceFilterPanel from '../../components/Edition/SourceFilterPanel';
 import CategoryFilterPanel from '../../components/Edition/CategoryFilterPanel';
 import PeriodFilterPanel from '../../components/Edition/PeriodFilterPanel';
 import CsvEditorTable, { CsvEditorTableRef } from '../../components/Edition/CsvEditorTable';
 import AutoCategorisationReviewModal from '../../components/Edition/AutoCategorisationReviewModal';
+import CleanDuplicatesModal from '../../components/Edition/CleanDuplicatesModal';
 import CategoryLegendPanel from '../../components/Edition/CategoryLegendPanel';
 import { EditionService } from '../../services/EditionService';
 import { ConfigService } from '../../services/ConfigService';
 import { AutoCategorisationService } from '../../services/AutoCategorisationService';
-import { EditionRow } from '../../types/Edition';
+import { EditionRow, DuplicateRowEntry } from '../../types/Edition';
 import { WordStatsMap, PendingAutoCategorisation } from '../../types/AutoCategorisation';
 import '../../styles/edition-custom.css';
 
@@ -38,9 +39,13 @@ const Edition: React.FC = () => {
   const [autoCategorisationStats, setAutoCategorisationStats] = useState<WordStatsMap>({});
   const [pendingAutoCategorisation, setPendingAutoCategorisation] = useState<PendingAutoCategorisation[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showCleanDuplicatesModal, setShowCleanDuplicatesModal] = useState(false);
+  const [cleanDuplicatesPreview, setCleanDuplicatesPreview] = useState<{ duplicates: DuplicateRowEntry[]; inconsistenciesCount: number }>({ duplicates: [], inconsistenciesCount: 0 });
+  const [loadingDuplicates, setLoadingDuplicates] = useState(false);
   const [isLegendCollapsed, setIsLegendCollapsed] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [ignoredFiles, setIgnoredFiles] = useState<Array<{ fileName: string; accountCode: string }>>([]);
+  const [categoriesRefreshKey, setCategoriesRefreshKey] = useState(0);
   const csvTableRef = useRef<CsvEditorTableRef>(null);
 
   useEffect(() => {
@@ -475,23 +480,43 @@ const Edition: React.FC = () => {
     }
   }, [allRows, autoCategorisationStats, t]);
 
-  const handleCleanDuplicates = useCallback(async () => {
-    if (!window.confirm(t('edition.cleanConfirm'))) {
-      return;
-    }
-    
+  const handleOpenCleanDuplicates = useCallback(async () => {
+    setShowCleanDuplicatesModal(true);
+    setLoadingDuplicates(true);
     try {
-      setIsDataLoading(true);
-      const result = await EditionService.cleanDuplicateCSVFiles();
-      toast.success(t('edition.cleanSuccess', { cleaned: result.cleaned, fixed: result.inconsistenciesFixed, files: result.filesProcessed }));
-      await loadData(); // Recharger les données
+      const { duplicates, inconsistenciesCount } = await EditionService.getDuplicatesPreview();
+      setCleanDuplicatesPreview({ duplicates, inconsistenciesCount });
     } catch (error: any) {
-      console.error('Erreur lors du nettoyage:', error);
+      console.error('Erreur lors de la recherche des doublons:', error);
       toast.error(t('edition.cleanError', { error: error.message }));
+      setShowCleanDuplicatesModal(false);
     } finally {
-      setIsDataLoading(false);
+      setLoadingDuplicates(false);
     }
   }, [t]);
+
+  const handleConfirmCleanDuplicates = useCallback(
+    async (selectedIds: string[]) => {
+      if (selectedIds.length === 0) {
+        setShowCleanDuplicatesModal(false);
+        return;
+      }
+      try {
+        setIsDataLoading(true);
+        const result = await EditionService.removeSelectedDuplicates(selectedIds);
+        toast.success(t('edition.cleanSuccess', { cleaned: result.removed, fixed: result.inconsistenciesFixed, files: result.filesProcessed }));
+        setShowCleanDuplicatesModal(false);
+        setCleanDuplicatesPreview({ duplicates: [], inconsistenciesCount: 0 });
+        await loadData();
+      } catch (error: any) {
+        console.error('Erreur lors du nettoyage:', error);
+        toast.error(t('edition.cleanError', { error: error.message }));
+      } finally {
+        setIsDataLoading(false);
+      }
+    },
+    [t]
+  );
 
   const handleAutoCategorize = useCallback(async () => {
     try {
@@ -679,11 +704,12 @@ const Edition: React.FC = () => {
             <span>{t('edition.autoCategorize')}</span>
           </button>
           <button
-            onClick={handleCleanDuplicates}
+            onClick={handleOpenCleanDuplicates}
             className="action-button"
             disabled={isDataLoading}
+            title={t('edition.cleanFilesTooltip')}
           >
-            <FontAwesomeIcon icon={faTrashAlt} />
+            <FontAwesomeIcon icon={faBroom} />
             <span>{t('edition.cleanFiles')}</span>
           </button>
         </div>
@@ -740,6 +766,7 @@ const Edition: React.FC = () => {
                     setShowUncategorized(showUncat);
                   });
                 }}
+                categoriesRefreshKey={categoriesRefreshKey}
               />
             </div>
 
@@ -874,6 +901,7 @@ const Edition: React.FC = () => {
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 categorySuggestions={suggestionsMap}
+                categoriesRefreshKey={categoriesRefreshKey}
               />
             )}
           </div>
@@ -882,10 +910,7 @@ const Edition: React.FC = () => {
           <CategoryLegendPanel
             isCollapsed={isLegendCollapsed}
             onToggleCollapse={() => setIsLegendCollapsed(!isLegendCollapsed)}
-            onCategoriesChange={() => {
-              // Recharger les catégories dans CategoryFilterPanel si nécessaire
-              // Le composant se mettra à jour automatiquement via ConfigService
-            }}
+            onCategoriesChange={() => setCategoriesRefreshKey(k => k + 1)}
           />
         </div>
 
@@ -904,6 +929,18 @@ const Edition: React.FC = () => {
         }}
         suggestions={pendingAutoCategorisation}
         onConfirm={handleConfirmAutoCategorisation}
+      />
+
+      <CleanDuplicatesModal
+        isOpen={showCleanDuplicatesModal}
+        onClose={() => {
+          setShowCleanDuplicatesModal(false);
+          setCleanDuplicatesPreview({ duplicates: [], inconsistenciesCount: 0 });
+        }}
+        duplicates={cleanDuplicatesPreview.duplicates}
+        inconsistenciesCount={cleanDuplicatesPreview.inconsistenciesCount}
+        isLoading={loadingDuplicates}
+        onConfirm={handleConfirmCleanDuplicates}
       />
     </div>
   );

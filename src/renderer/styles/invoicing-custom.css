@@ -155,6 +155,7 @@ html.dark .invoicing-menu-item.active {
 
 .invoicing-content {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -176,6 +177,7 @@ html.dark .invoicing-title {
    CAROUSEL AGRANDI ET MODERNE
    ============================================ */
 .invoicing-carousel-container {
+  flex: 1;
   background-color: var(--invoicing-gray-50);
   border: 1px solid var(--invoicing-gray-300);
   border-radius: 12px;
@@ -197,27 +199,33 @@ html.dark .invoicing-carousel-container {
 
 .invoicing-carousel-viewport {
   overflow: hidden;
-  min-height: 380px;
+  min-height: 0;
   flex: 1;
 }
 
 .invoicing-carousel-track {
   display: flex;
   width: 300%;
+  height: 100%;
   transition: transform 0.6s ease-in-out;
 }
 
 .invoicing-carousel-page {
   width: calc(100% / 3);
+  height: 100%;
+  min-height: 0;
   flex-shrink: 0;
   padding: 0 12px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .invoicing-page-content {
   display: flex;
   gap: 24px;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Info boxes en colonne à gauche */
@@ -294,6 +302,7 @@ html.dark .invoicing-info-box-value {
 /* Section graphique */
 .invoicing-graph-section {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -304,6 +313,8 @@ html.dark .invoicing-info-box-value {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 24px;
+  min-height: 0;
+  flex: 1;
 }
 
 .invoicing-graph-card {
@@ -313,8 +324,11 @@ html.dark .invoicing-info-box-value {
   padding: 16px;
   transition: all 0.3s ease;
   flex: 1;
+  min-height: 0;
   width: 100%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .dark .invoicing-graph-card,
@@ -329,6 +343,7 @@ html.dark .invoicing-graph-card {
   font-weight: 600;
   color: var(--invoicing-gray-900);
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .dark .invoicing-graph-card-title,
@@ -337,8 +352,8 @@ html.dark .invoicing-graph-card-title {
 }
 
 .invoicing-graph-card-content {
-  height: 320px;
-  min-height: 300px;
+  flex: 1;
+  min-height: 200px;
   width: 100%;
   max-width: 100%;
   overflow: hidden;

@@ -177,10 +177,20 @@ export class FileDetectionService {
     // Avec peu de données (< 10), être plus tolérant (40% au lieu de 60%)
     const dateThreshold = sampleSize < 10 ? 0.4 : 0.6;
 
+    // Plage des numéros de série Excel pour des dates plausibles (≈ 1982–2036).
+    // Les montants (100.5, 1234.56, 10000) ne doivent pas être comptés comme dates.
+    const EXCEL_SERIAL_DATE_MIN = 30000;
+    const EXCEL_SERIAL_DATE_MAX = 50000;
+
     for (const value of nonEmptyValues.slice(0, sampleSize)) {
       const parsed = parseDateWithMultipleFormats(value);
       if (parsed !== null) {
-        dateCount++;
+        const num =
+          typeof value === 'number'
+            ? value
+            : parseFloat(String(value).trim().replace(/\s/g, '').replace(',', '.'));
+        const looksLikeAmount = !isNaN(num) && (num < EXCEL_SERIAL_DATE_MIN || num > EXCEL_SERIAL_DATE_MAX);
+        if (!looksLikeAmount) dateCount++;
       }
     }
 

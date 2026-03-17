@@ -16,6 +16,7 @@ interface CsvEditorTableProps {
   sortColumn?: string | null;
   sortDirection?: 'asc' | 'desc' | null;
   categorySuggestions?: Record<number, string | null>; // Suggestions de catégories par index de ligne
+  categoriesRefreshKey?: number;
 }
 
 export interface CsvEditorTableRef {
@@ -487,6 +488,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   sortColumn,
   sortDirection,
   categorySuggestions: _categorySuggestions = {}, // Non utilisé, calculé à la demande maintenant
+  categoriesRefreshKey = 0,
 }, ref) => {
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; colIndex: number } | null>(null);
   const [editingValue, setEditingValue] = useState<string>(''); // Valeur temporaire pendant l'édition
@@ -498,6 +500,9 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
   const tableRef = useRef<HTMLTableElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const blurTimeoutRef = useRef<number | null>(null);
+  /** True quand le blur est dû à Enter/Arrow (navigation vers autre cellule). Permet d'ignorer le clear d'état après le blur différé (200ms) de la cellule catégorie. */
+  const skipBlurClearRef = useRef<boolean>(false);
+  const skipBlurClearTimeoutRef = useRef<number | null>(null);
   // Refs pour accéder aux valeurs actuelles dans clearModifications
   const editingCellRef = useRef<{ rowIndex: number; colIndex: number } | null>(null);
   const editingValueRef = useRef<string>('');
@@ -533,7 +538,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       }
     };
     loadCategories();
-  }, []);
+  }, [categoriesRefreshKey]);
   
   // Mettre à jour la ref des catégories quand elles changent
   useEffect(() => {
@@ -585,6 +590,10 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       if (blurTimeoutRef.current !== null) {
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
+      }
+      if (skipBlurClearTimeoutRef.current !== null) {
+        clearTimeout(skipBlurClearTimeoutRef.current);
+        skipBlurClearTimeoutRef.current = null;
       }
     };
   }, []);
@@ -1034,6 +1043,13 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
       clearTimeout(blurTimeoutRef.current);
       blurTimeoutRef.current = null;
     }
+
+    // Si le blur est dû à Enter/Arrow (navigation vers autre cellule), ne pas appliquer ni lancer le clear d'état
+    // (évite que le blur différé 200ms de la cellule catégorie réinitialise l'édition après passage à la ligne suivante)
+    if (skipBlurClearRef.current) {
+      skipBlurClearRef.current = false;
+      return;
+    }
     
     // Appliquer le changement avant de fermer l'édition
     if (editingCell) {
@@ -1090,15 +1106,21 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
     const totalRows = rowsRef.current.length;
     const totalCols = headersRef.current.length;
     const input = event.target as HTMLInputElement | HTMLTextAreaElement;
-    const valueToApply = valueOverride !== undefined ? valueOverride : editingValue;
+    // Utiliser la ref (ou input.value) pour avoir la valeur la plus récente - évite closure stale si Enter pressé juste après frappe
+    const valueToApply = valueOverride !== undefined ? valueOverride : (editingValueRef.current ?? input?.value ?? editingValue);
 
     switch (event.key) {
-      case 'ArrowUp':
+      case 'ArrowUp': {
         event.preventDefault();
-        // Appliquer le changement avant de se déplacer
         if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
           applyCellChange(rowIndex, colIndex, valueToApply);
         }
+        skipBlurClearRef.current = true;
+        if (skipBlurClearTimeoutRef.current !== null) clearTimeout(skipBlurClearTimeoutRef.current);
+        skipBlurClearTimeoutRef.current = window.setTimeout(() => {
+          skipBlurClearRef.current = false;
+          skipBlurClearTimeoutRef.current = null;
+        }, 250);
         if (rowIndex > 0) {
           const targetCell = tableRef.current?.querySelector(
             `tbody tr[data-row-index="${rowIndex - 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex - 1}"] td:nth-child(${colIndex + 1}) textarea`
@@ -1107,13 +1129,19 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
           targetCell?.select();
         }
         break;
+      }
 
-      case 'ArrowDown':
+      case 'ArrowDown': {
         event.preventDefault();
-        // Appliquer le changement avant de se déplacer
         if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
           applyCellChange(rowIndex, colIndex, valueToApply);
         }
+        skipBlurClearRef.current = true;
+        if (skipBlurClearTimeoutRef.current !== null) clearTimeout(skipBlurClearTimeoutRef.current);
+        skipBlurClearTimeoutRef.current = window.setTimeout(() => {
+          skipBlurClearRef.current = false;
+          skipBlurClearTimeoutRef.current = null;
+        }, 250);
         if (rowIndex < totalRows - 1) {
           const targetCell = tableRef.current?.querySelector(
             `tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) textarea`
@@ -1122,6 +1150,7 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
           targetCell?.select();
         }
         break;
+      }
 
       case 'ArrowLeft':
         if (event.ctrlKey || input.selectionStart === 0) {
@@ -1187,25 +1216,28 @@ const CsvEditorTable = forwardRef<CsvEditorTableRef, CsvEditorTableProps>(({
         }
         break;
 
-      case 'Enter':
-        if (headersRef.current[colIndex] !== 'Libellé') {
-          event.preventDefault();
-          // Appliquer le changement avant de se déplacer
-          if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
-            applyCellChange(rowIndex, colIndex, valueToApply);
-          }
-          input.blur();
-          
-          if (rowIndex < totalRows - 1) {
-            // Passer à la cellule de la même colonne sur la ligne suivante (comportement Excel)
-            const targetCell = tableRef.current?.querySelector(
-              `tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) textarea`
-            ) as HTMLInputElement | HTMLTextAreaElement;
-            targetCell?.focus();
-            targetCell?.select();
-          }
+      case 'Enter': {
+        event.preventDefault();
+        if (editingCell && editingCell.rowIndex === rowIndex && editingCell.colIndex === colIndex) {
+          applyCellChange(rowIndex, colIndex, valueToApply);
+        }
+        skipBlurClearRef.current = true;
+        if (skipBlurClearTimeoutRef.current !== null) clearTimeout(skipBlurClearTimeoutRef.current);
+        skipBlurClearTimeoutRef.current = window.setTimeout(() => {
+          skipBlurClearRef.current = false;
+          skipBlurClearTimeoutRef.current = null;
+        }, 250);
+        input.blur();
+
+        if (rowIndex < totalRows - 1) {
+          const targetCell = tableRef.current?.querySelector(
+            `tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) input, tbody tr[data-row-index="${rowIndex + 1}"] td:nth-child(${colIndex + 1}) textarea`
+          ) as HTMLInputElement | HTMLTextAreaElement;
+          targetCell?.focus();
+          targetCell?.select();
         }
         break;
+      }
     }
   }, [editingCell, editingValue, applyCellChange]);
 

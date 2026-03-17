@@ -30,8 +30,8 @@
     },
     "regimeTVA": "franchise",
     "mentionFranchiseTVA": "TVA non applicable, art. 293 B du CGI",
-    "createdAt": "2026-03-13T17:18:41.687Z",
-    "updatedAt": "2026-03-13T17:18:41.687Z"
+    "createdAt": "",
+    "updatedAt": ""
   },
   "prefixeDevis": "DEVIS",
   "prefixeFacture": "FAC",

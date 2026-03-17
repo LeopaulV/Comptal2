@@ -13,7 +13,7 @@ export interface MenuVisibility {
 
 export interface AppSettings {
   theme: 'light' | 'dark' | 'auto';
-  language: 'fr' | 'en';
+  language: 'fr' | 'en' | 'de';
   currency: string;
   dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   dataDirectory: string;
