@@ -5,7 +5,7 @@ import { AppSettings } from '../types/Settings';
 
 export const useLanguage = () => {
   const { i18n } = useTranslation();
-  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en'>('fr');
+  const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en' | 'de'>('fr');
   const [isLoading, setIsLoading] = useState(true);
 
   // Charger la langue depuis les settings au montage
@@ -29,7 +29,7 @@ export const useLanguage = () => {
   }, [i18n]);
 
   // Fonction pour changer la langue
-  const changeLanguage = async (lang: 'fr' | 'en') => {
+  const changeLanguage = async (lang: 'fr' | 'en' | 'de') => {
     try {
       // Changer la langue dans i18next
       await i18n.changeLanguage(lang);

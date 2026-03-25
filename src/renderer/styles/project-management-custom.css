@@ -1,0 +1,1004 @@
+/* Styles pour la page Gestion et Projet - Design professionnel et sobre (charte Édition) */
+
+/* ============================================
+   PALETTE DE COULEURS PROFESSIONNELLE
+   ============================================ */
+:root {
+  /* Thème clair - Bleus professionnels */
+  --project-primary: #1e3a8a;
+  --project-primary-light: #3b82f6;
+  --project-primary-lighter: #60a5fa;
+  --project-primary-lightest: #dbeafe;
+  
+  /* Gris neutres */
+  --project-gray-50: #f8fafc;
+  --project-gray-100: #f1f5f9;
+  --project-gray-200: #e2e8f0;
+  --project-gray-300: #cbd5e1;
+  --project-gray-400: #94a3b8;
+  --project-gray-500: #64748b;
+  --project-gray-600: #475569;
+  --project-gray-700: #334155;
+  --project-gray-800: #1e293b;
+  --project-gray-900: #0f172a;
+  
+  /* États */
+  --project-success: #10b981;
+  --project-warning: #f59e0b;
+  --project-danger: #ef4444;
+  --project-info: #3b82f6;
+  
+  /* Ombres professionnelles */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark {
+  /* Thème sombre - Bleus atténués */
+  --project-primary: #3b82f6;
+  --project-primary-light: #60a5fa;
+  --project-primary-lighter: #93c5fd;
+  --project-primary-lightest: #1e3a8a;
+  
+  /* Gris foncés harmonieux */
+  --project-gray-50: #0f172a;
+  --project-gray-100: #1e293b;
+  --project-gray-200: #334155;
+  --project-gray-300: #475569;
+  --project-gray-400: #64748b;
+  --project-gray-500: #94a3b8;
+  --project-gray-600: #cbd5e1;
+  --project-gray-700: #e2e8f0;
+  --project-gray-800: #f1f5f9;
+  --project-gray-900: #f8fafc;
+}
+
+/* ============================================
+   CONTAINER PRINCIPAL
+   ============================================ */
+.project-management-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  background-color: var(--project-gray-50);
+  transition: background-color 0.3s ease;
+}
+
+.dark .project-management-page {
+  background-color: var(--project-gray-100);
+}
+
+.project-management-page h1 {
+  color: var(--project-gray-800);
+  margin-bottom: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  transition: color 0.3s ease;
+}
+
+.dark .project-management-page h1 {
+  color: var(--project-gray-700);
+}
+
+/* ============================================
+   ONGLETS
+   ============================================ */
+.chart-tabs-container {
+  margin-bottom: 0;
+  margin-top: 20px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 8px;
+  background-color: var(--project-gray-100);
+  border-radius: 12px 12px 0 0;
+  padding: 6px;
+  border: 1px solid var(--project-gray-300);
+  border-bottom: none;
+  transition: all 0.3s ease;
+}
+
+.dark .chart-tabs {
+  background-color: var(--project-gray-200);
+  border-color: var(--project-gray-400);
+}
+
+.chart-tab {
+  flex: 1;
+  padding: 12px 24px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--project-gray-600);
+  font-weight: 500;
+  font-size: 0.95rem;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.dark .chart-tab {
+  color: var(--project-gray-500);
+}
+
+.chart-tab:hover {
+  background-color: var(--project-gray-200);
+  color: var(--project-gray-800);
+  transform: translateY(-1px);
+}
+
+.dark .chart-tab:hover {
+  background-color: var(--project-gray-300);
+  color: var(--project-gray-700);
+}
+
+.chart-tab.active {
+  background-color: #ffffff;
+  color: var(--project-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  border-color: var(--project-gray-300);
+  border-bottom-color: transparent;
+  z-index: 1;
+}
+
+.dark .chart-tab.active {
+  background-color: var(--project-gray-200);
+  color: var(--project-primary-light);
+  border-color: var(--project-gray-400);
+}
+
+/* ============================================
+   CONTENU
+   ============================================ */
+.project-management-content {
+  background-color: white;
+  border: 1px solid var(--project-gray-300);
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 500px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.dark .project-management-content {
+  background-color: var(--project-gray-200);
+  border-color: var(--project-gray-400);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================
+   TABLEAU DES ABONNEMENTS
+   ============================================ */
+.subscription-table-container {
+  width: 100%;
+}
+
+.subscription-table-container h2 {
+  color: var(--project-gray-800);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  transition: color 0.3s ease;
+}
+
+.dark .subscription-table-container h2 {
+  color: var(--project-gray-700);
+}
+
+.subscription-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .subscription-table-container table {
+  background-color: var(--project-gray-200);
+}
+
+.subscription-table-container th,
+.subscription-table-container td {
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid var(--project-gray-200);
+}
+
+.dark .subscription-table-container th,
+.dark .subscription-table-container td {
+  border-color: var(--project-gray-300);
+}
+
+.subscription-table-container th {
+  background-color: var(--project-gray-100);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--project-gray-700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dark .subscription-table-container th {
+  background-color: var(--project-gray-300);
+  color: var(--project-gray-600);
+}
+
+.subscription-table-container tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.subscription-table-container tbody tr:hover {
+  background-color: var(--project-gray-50);
+}
+
+.dark .subscription-table-container tbody tr:hover {
+  background-color: var(--project-gray-300);
+}
+
+.subscription-table-container input[type="text"],
+.subscription-table-container input[type="number"],
+.subscription-table-container input[type="date"],
+.subscription-table-container select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--project-gray-300);
+  border-radius: 6px;
+  background-color: white;
+  color: var(--project-gray-900);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.dark .subscription-table-container input[type="text"],
+.dark .subscription-table-container input[type="number"],
+.dark .subscription-table-container input[type="date"],
+.dark .subscription-table-container select {
+  border-color: var(--project-gray-400);
+  background-color: var(--project-gray-200);
+  color: var(--project-gray-900);
+}
+
+.subscription-table-container input:focus,
+.subscription-table-container select:focus {
+  outline: none;
+  border-color: var(--project-primary);
+  box-shadow: 0 0 0 3px var(--project-primary-lightest);
+}
+
+.dark .subscription-table-container input:focus,
+.dark .subscription-table-container select:focus {
+  border-color: var(--project-primary-light);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ============================================
+   BOUTONS
+   ============================================ */
+.subscription-table-container button,
+.project-selector button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+}
+
+.subscription-table-container button[class*="bg-primary"],
+.project-selector button[class*="bg-primary"] {
+  background-color: var(--project-primary);
+  color: white;
+}
+
+.subscription-table-container button[class*="bg-primary"]:hover,
+.project-selector button[class*="bg-primary"]:hover {
+  background-color: var(--project-primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.subscription-table-container button[class*="bg-red"],
+.project-selector button[class*="bg-red"] {
+  background-color: var(--project-danger);
+  color: white;
+}
+
+.subscription-table-container button[class*="bg-red"]:hover,
+.project-selector button[class*="bg-red"]:hover {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   SÉLECTEUR DE PROJET
+   ============================================ */
+.project-selector {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.project-selector label {
+  display: block;
+  font-weight: 500;
+  color: var(--project-gray-700);
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.dark .project-selector label {
+  color: var(--project-gray-600);
+}
+
+.project-selector select {
+  flex: 1;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--project-gray-300);
+  border-radius: 6px;
+  background-color: white;
+  color: var(--project-gray-900);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.dark .project-selector select {
+  border-color: var(--project-gray-400);
+  background-color: var(--project-gray-200);
+  color: var(--project-gray-900);
+}
+
+.project-selector select:focus {
+  outline: none;
+  border-color: var(--project-primary);
+  box-shadow: 0 0 0 3px var(--project-primary-lightest);
+}
+
+.dark .project-selector select:focus {
+  border-color: var(--project-primary-light);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Modal de création de projet */
+.project-selector .fixed {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(4px);
+}
+
+.project-selector .fixed > div {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 28rem;
+  width: 100%;
+  margin: 1rem;
+  box-shadow: var(--shadow-xl);
+}
+
+.dark .project-selector .fixed > div {
+  background-color: var(--project-gray-200);
+}
+
+.project-selector .fixed > div h3 {
+  color: var(--project-gray-800);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.dark .project-selector .fixed > div h3 {
+  color: var(--project-gray-700);
+}
+
+.project-selector .fixed > div input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--project-gray-300);
+  border-radius: 6px;
+  background-color: white;
+  color: var(--project-gray-900);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.dark .project-selector .fixed > div input {
+  border-color: var(--project-gray-400);
+  background-color: var(--project-gray-200);
+  color: var(--project-gray-900);
+}
+
+.project-selector .fixed > div input:focus {
+  outline: none;
+  border-color: var(--project-primary);
+  box-shadow: 0 0 0 3px var(--project-primary-lightest);
+}
+
+.dark .project-selector .fixed > div input:focus {
+  border-color: var(--project-primary-light);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ============================================
+   DASHBOARD DE PROJECTION
+   ============================================ */
+.projection-dashboard {
+  width: 100%;
+}
+
+.projection-dashboard h2 {
+  color: var(--project-gray-800);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  transition: color 0.3s ease;
+}
+
+.dark .projection-dashboard h2 {
+  color: var(--project-gray-700);
+}
+
+.projection-dashboard .grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.projection-dashboard .grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.projection-dashboard .grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .projection-dashboard .lg\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Cartes des graphiques */
+.projection-dashboard .bg-white {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--project-gray-200);
+  transition: all 0.3s ease;
+}
+
+.dark .projection-dashboard .bg-white {
+  background-color: var(--project-gray-200);
+  border-color: var(--project-gray-400);
+  box-shadow: var(--shadow-lg);
+}
+
+.projection-dashboard .bg-white h3 {
+  color: var(--project-gray-700);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.dark .projection-dashboard .bg-white h3 {
+  color: var(--project-gray-600);
+}
+
+/* Indicateurs clés */
+.projection-dashboard .stat-card {
+  background-color: white;
+  padding: 1.25rem;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--project-gray-200);
+  transition: all 0.3s ease;
+}
+
+.dark .projection-dashboard .stat-card {
+  background-color: var(--project-gray-200);
+  border-color: var(--project-gray-400);
+  box-shadow: var(--shadow-lg);
+}
+
+.projection-dashboard .stat-card .text-sm {
+  color: var(--project-gray-600);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dark .projection-dashboard .stat-card .text-sm {
+  color: var(--project-gray-500);
+}
+
+/* Configuration de projection */
+.projection-dashboard .bg-white:has(> h3:contains("Configuration")) {
+  background-color: var(--project-gray-50);
+}
+
+.dark .projection-dashboard .bg-white:has(> h3:contains("Configuration")) {
+  background-color: var(--project-gray-300);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+  .project-management-page .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .projection-dashboard .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .subscription-table-container {
+    overflow-x: auto;
+  }
+  
+  .project-selector .hidden {
+    display: none;
+  }
+  
+  .projection-dashboard .stat-card {
+    padding: 1rem;
+  }
+  
+  .projection-dashboard .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-tab {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+  }
+}
+
+/* ============================================
+   CARROUSEL DE GRAPHIQUES
+   ============================================ */
+.graph-carousel-container {
+  flex: 1;
+  /* On enlève le plafond de hauteur pour respecter la min-height "fixe minimale" */
+  max-height: none;
+  min-height: 550px;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid var(--project-gray-200);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.dark .graph-carousel-container,
+html.dark .graph-carousel-container {
+  background-color: var(--project-gray-200);
+  border-color: var(--project-gray-400);
+  box-shadow: var(--shadow-lg);
+  color: #f1f5f9;
+}
+
+.graph-carousel-viewport {
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.graph-carousel-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.6s ease-in-out;
+  width: 200%;
+}
+
+.graph-carousel-page {
+  width: 50%;
+  height: 100%;
+  min-height: 0;
+  flex-shrink: 0;
+  padding: 0 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.graph-page-content {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Boxes d'information en colonne */
+.info-boxes-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.info-box {
+  background-color: var(--project-gray-50);
+  border: 1px solid var(--project-gray-200);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.dark .info-box {
+  background-color: var(--project-gray-300);
+  border-color: var(--project-gray-400);
+}
+
+.info-box:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.info-box-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--project-gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.dark .info-box-label {
+  color: var(--project-gray-500);
+}
+
+.info-box-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.info-box-value-debit {
+  color: #ef4444;
+}
+
+.dark .info-box-value-debit {
+  color: #f87171;
+}
+
+.info-box-value-credit {
+  color: #10b981;
+}
+
+.dark .info-box-value-credit {
+  color: #34d399;
+}
+
+/* Section des graphiques */
+.graphs-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+.graphs-section-full {
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  width: 100%;
+}
+
+.graph-card {
+  background-color: var(--project-gray-50);
+  border: 1px solid var(--project-gray-200);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dark .graph-card {
+  background-color: var(--project-gray-300);
+  border-color: var(--project-gray-400);
+}
+
+.graph-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--project-gray-700);
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.dark .graph-card-title {
+  color: var(--project-gray-600);
+}
+
+.graph-card-content {
+  flex: 1;
+  min-height: 150px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Flèches de navigation */
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--project-gray-300);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0.7;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
+}
+
+.dark .carousel-arrow {
+  background-color: rgba(30, 41, 59, 0.9);
+  border-color: var(--project-gray-400);
+  color: var(--project-gray-200);
+}
+
+.carousel-arrow:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.carousel-arrow-left {
+  left: 16px;
+}
+
+.carousel-arrow-right {
+  right: 16px;
+}
+
+.carousel-arrow svg {
+  font-size: 1.25rem;
+  color: var(--project-gray-700);
+}
+
+.dark .carousel-arrow svg {
+  color: var(--project-gray-300);
+}
+
+/* Indicateurs de page */
+.carousel-indicators {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--project-gray-200);
+}
+
+.dark .carousel-indicators {
+  border-top-color: var(--project-gray-400);
+}
+
+.carousel-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--project-gray-400);
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.dark .carousel-indicator {
+  border-color: var(--project-gray-500);
+}
+
+.carousel-indicator:hover {
+  transform: scale(1.2);
+  border-color: var(--project-primary);
+}
+
+.carousel-indicator.active {
+  background-color: var(--project-primary);
+  border-color: var(--project-primary);
+  width: 24px;
+  border-radius: 5px;
+}
+
+/* ============================================
+   CONTROLES "PAR PAGE" (modèle Entreprise/Association)
+   ============================================ */
+.graph-carousel-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--project-gray-200);
+  flex-shrink: 0;
+}
+
+.dark .graph-carousel-controls,
+html.dark .graph-carousel-controls {
+  border-top-color: var(--project-gray-400);
+}
+
+.graph-carousel-tab {
+  padding: 10px 20px;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--project-gray-300);
+  background-color: var(--project-gray-50);
+  color: var(--project-gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.graph-carousel-tab:hover {
+  background-color: var(--project-gray-100);
+  border-color: var(--project-gray-400);
+  color: var(--project-gray-900);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.graph-carousel-tab.active {
+  background-color: var(--project-primary);
+  color: #fff;
+  border-color: var(--project-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.graph-carousel-tab.active:hover {
+  background-color: var(--project-primary-lightest);
+  border-color: var(--project-primary-lightest);
+}
+
+.dark .graph-carousel-tab,
+html.dark .graph-carousel-tab {
+  background-color: var(--project-gray-200);
+  color: var(--project-gray-600);
+  border-color: var(--project-gray-400);
+}
+
+.dark .graph-carousel-tab:hover,
+html.dark .graph-carousel-tab:hover {
+  background-color: var(--project-gray-300);
+  color: var(--project-gray-800);
+  border-color: var(--project-gray-500);
+}
+
+.dark .graph-carousel-tab.active,
+html.dark .graph-carousel-tab.active {
+  background-color: var(--project-primary-light);
+  color: #ffffff;
+  border-color: var(--project-primary-light);
+}
+
+/* Configuration compacte */
+.projection-config-compact {
+  width: 100%;
+}
+
+.projection-config-compact .bg-white {
+  background-color: white;
+  border: 1px solid var(--project-gray-300);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .projection-config-compact .bg-white {
+  background-color: var(--project-gray-200);
+  border-color: var(--project-gray-400);
+}
+
+/* Bloc principal (carousel + section basse) - remplit l'espace au dézoom */
+.project-management-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-management-main .graph-carousel-container {
+  flex: 1;
+}
+
+/* Section basse */
+.project-management-bottom-section {
+  width: 100%;
+}
+
+/* ============================================
+   RESPONSIVE CARROUSEL
+   ============================================ */
+@media (max-width: 1024px) {
+  .graph-page-content {
+    flex-direction: column;
+  }
+
+  .info-boxes-column {
+    flex-direction: row;
+    min-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .info-box {
+    flex: 1;
+    min-width: calc(50% - 6px);
+  }
+
+  .graphs-section {
+    grid-template-columns: 1fr;
+  }
+
+  .graphs-section-full {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .graph-carousel-container {
+    padding: 16px;
+    min-height: 500px;
+  }
+
+  .info-boxes-column {
+    flex-direction: column;
+  }
+
+  .info-box {
+    min-width: 100%;
+  }
+
+  .carousel-arrow {
+    width: 40px;
+    height: 40px;
+  }
+
+  .carousel-arrow-left {
+    left: 8px;
+  }
+
+  .carousel-arrow-right {
+    right: 8px;
+  }
+
+  .graph-card-content {
+    min-height: 200px;
+  }
+}

@@ -25,10 +25,12 @@ const FilterBox: React.FC<FilterBoxProps> = ({
 
   return (
     <div className="filter-box">
-      <h5>
-        <FontAwesomeIcon icon={icon} className="mr-2" />
-        {title}
-      </h5>
+      {title && (
+        <h5>
+          <FontAwesomeIcon icon={icon} className="mr-2" />
+          {title}
+        </h5>
+      )}
       <div className="filter-box-content">
         <div className="filter-header">
           <button

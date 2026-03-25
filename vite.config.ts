@@ -52,6 +52,9 @@ export default defineConfig(({ command }) => {
         '@utils': path.resolve(__dirname, './src/renderer/utils')
       }
     },
+    optimizeDeps: {
+      include: ['pdfmake/build/pdfmake', 'pdfmake/build/vfs_fonts']
+    },
     build: {
       outDir: 'dist',
       emptyOutDir: true

@@ -60,7 +60,7 @@
    ============================================ */
 .editor-container {
   display: flex;
-  height: calc(100vh - 140px);
+  min-height: 0;
   margin: 10px;
   gap: 20px;
   padding: 15px;
@@ -77,8 +77,18 @@
   cursor: wait;
 }
 
-.editor-container.loading * {
-  cursor: wait !important;
+/* Ne pas bloquer les interactions avec les inputs pendant le chargement */
+/* Le sélecteur précédent .editor-container.loading * était trop agressif */
+.editor-container.loading button,
+.editor-container.loading .action-button {
+  cursor: wait;
+}
+
+/* S'assurer que les inputs restent interactifs même pendant le chargement */
+.editor-container.loading input,
+.editor-container.loading textarea {
+  cursor: text !important;
+  pointer-events: auto !important;
 }
 
 /* ============================================
@@ -87,16 +97,24 @@
 .editor-sidebar {
   width: 350px;
   min-width: 350px;
+  min-height: 0;
   background-color: #ffffff;
   padding: 24px;
   box-shadow: var(--shadow-md);
   border-radius: 12px;
-  height: calc(100vh - 180px);
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
   transition: all 0.3s ease;
+  position: relative;
+}
+
+.editor-sidebar.collapsed {
+  width: 50px;
+  min-width: 50px;
+  padding: 12px;
+  overflow: visible;
 }
 
 .dark .editor-sidebar {
@@ -104,19 +122,72 @@
   box-shadow: var(--shadow-lg);
 }
 
-.editor-sidebar h3 {
-  color: var(--edition-gray-800);
-  font-size: 1.5rem;
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 8px;
   padding-bottom: 16px;
   border-bottom: 2px solid var(--edition-gray-200);
+}
+
+.editor-sidebar.collapsed .sidebar-header {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  justify-content: center;
+}
+
+.dark .sidebar-header {
+  border-bottom-color: var(--edition-gray-300);
+}
+
+.editor-sidebar h3 {
+  color: var(--edition-gray-800);
+  font-size: 1.5rem;
+  margin: 0;
   font-weight: 600;
   transition: color 0.3s ease;
+  flex: 1;
 }
 
 .dark .editor-sidebar h3 {
   color: var(--edition-gray-700);
-  border-bottom-color: var(--edition-gray-300);
+}
+
+.sidebar-collapse-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--edition-gray-600);
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar-collapse-button:hover {
+  background-color: var(--edition-gray-200);
+  color: var(--edition-gray-900);
+}
+
+.dark .sidebar-collapse-button {
+  color: var(--edition-gray-500);
+}
+
+.dark .sidebar-collapse-button:hover {
+  background-color: var(--edition-gray-400);
+  color: var(--edition-gray-900);
+}
+
+.editor-sidebar.collapsed .sidebar-collapse-button {
+  width: 100%;
+  height: auto;
+  padding: 12px;
 }
 
 /* ============================================
@@ -169,6 +240,24 @@
   font-size: 1.1rem;
 }
 
+.action-button .spinning-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+.action-button .spinning-icon svg {
+  display: block;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ============================================
    FILTRES
    ============================================ */
@@ -181,12 +270,13 @@
 
 .filter-nav {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-bottom: 12px;
 }
 
 .filter-nav-button {
-  flex: 1;
+  width: 100%;
   padding: 10px 14px;
   border: 1px solid var(--edition-gray-300);
   background-color: var(--edition-gray-50);
@@ -200,6 +290,7 @@
   justify-content: center;
   gap: 6px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .dark .filter-nav-button {
@@ -344,10 +435,21 @@
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s ease;
+  color: var(--edition-gray-800);
 }
 
 .dark .source-group-title {
   background-color: var(--edition-gray-300);
+  color: var(--edition-gray-800);
+}
+
+.dark .source-group-title span,
+.dark .source-group-title div {
+  color: var(--edition-gray-800);
+}
+
+.dark .source-group-title svg {
+  color: var(--edition-gray-800);
 }
 
 .source-group-title:hover {
@@ -361,6 +463,10 @@
 .source-group-title .toggle-icon {
   transition: transform 0.25s ease;
   color: var(--edition-gray-500);
+}
+
+.dark .source-group-title .toggle-icon {
+  color: var(--edition-gray-600);
 }
 
 .source-group.expanded .toggle-icon {
@@ -527,6 +633,116 @@
 }
 
 /* ============================================
+   FILTRES DE PÉRIODE
+   ============================================ */
+.period-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.period-date-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.period-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.period-date-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--edition-gray-700);
+  margin: 0;
+}
+
+.dark .period-date-label {
+  color: var(--edition-gray-800);
+}
+
+.period-date-label svg {
+  color: var(--edition-primary);
+  font-size: 0.875rem;
+}
+
+.period-date-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--edition-gray-300);
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: var(--edition-gray-900);
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.dark .period-date-input {
+  background-color: var(--edition-gray-200);
+  border-color: var(--edition-gray-400);
+  color: var(--edition-gray-800);
+}
+
+.period-date-input:hover {
+  border-color: var(--edition-primary-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.period-date-input:focus {
+  outline: none;
+  border-color: var(--edition-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background-color: #ffffff;
+}
+
+.dark .period-date-input:focus {
+  background-color: var(--edition-gray-100);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.period-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.period-date-input:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+.period-filter-info {
+  padding: 10px 12px;
+  background-color: var(--edition-primary-lightest);
+  border-radius: 8px;
+  border: 1px solid var(--edition-primary-lighter);
+  margin-top: 4px;
+}
+
+.dark .period-filter-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: var(--edition-primary-light);
+}
+
+.period-filter-text {
+  font-size: 0.85rem;
+  color: var(--edition-primary);
+  font-weight: 500;
+  display: block;
+}
+
+.dark .period-filter-text {
+  color: var(--edition-primary-light);
+}
+
+/* ============================================
    CONTENU PRINCIPAL
    ============================================ */
 .editor-main-content {
@@ -630,6 +846,13 @@
   border: 1px solid var(--edition-gray-300);
   background-color: #ffffff;
   min-width: 0;
+  /* Masquer la scrollbar tout en gardant le scroll */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE et Edge */
+}
+
+.table-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .dark .table-wrapper {
@@ -1448,7 +1671,7 @@
 /* ============================================
    SCROLLBAR PERSONNALISÉE
    ============================================ */
-.table-wrapper::-webkit-scrollbar,
+/* Note: .table-wrapper a sa scrollbar masquée pour éviter les bugs */
 .filter-content-container::-webkit-scrollbar,
 .category-checkboxes::-webkit-scrollbar,
 .source-group-content::-webkit-scrollbar,
@@ -1458,7 +1681,6 @@
   height: 8px;
 }
 
-.table-wrapper::-webkit-scrollbar-track,
 .filter-content-container::-webkit-scrollbar-track,
 .category-checkboxes::-webkit-scrollbar-track,
 .source-group-content::-webkit-scrollbar-track,
@@ -1468,7 +1690,6 @@
   border-radius: 4px;
 }
 
-.dark .table-wrapper::-webkit-scrollbar-track,
 .dark .filter-content-container::-webkit-scrollbar-track,
 .dark .category-checkboxes::-webkit-scrollbar-track,
 .dark .source-group-content::-webkit-scrollbar-track,
@@ -1477,7 +1698,6 @@
   background: var(--edition-gray-300);
 }
 
-.table-wrapper::-webkit-scrollbar-thumb,
 .filter-content-container::-webkit-scrollbar-thumb,
 .category-checkboxes::-webkit-scrollbar-thumb,
 .source-group-content::-webkit-scrollbar-thumb,
@@ -1488,7 +1708,6 @@
   transition: background 0.2s ease;
 }
 
-.table-wrapper::-webkit-scrollbar-thumb:hover,
 .filter-content-container::-webkit-scrollbar-thumb:hover,
 .category-checkboxes::-webkit-scrollbar-thumb:hover,
 .source-group-content::-webkit-scrollbar-thumb:hover,
@@ -1497,7 +1716,6 @@
   background: var(--edition-gray-500);
 }
 
-.dark .table-wrapper::-webkit-scrollbar-thumb,
 .dark .filter-content-container::-webkit-scrollbar-thumb,
 .dark .category-checkboxes::-webkit-scrollbar-thumb,
 .dark .source-group-content::-webkit-scrollbar-thumb,
@@ -1506,11 +1724,157 @@
   background: var(--edition-gray-500);
 }
 
-.dark .table-wrapper::-webkit-scrollbar-thumb:hover,
 .dark .filter-content-container::-webkit-scrollbar-thumb:hover,
 .dark .category-checkboxes::-webkit-scrollbar-thumb:hover,
 .dark .source-group-content::-webkit-scrollbar-thumb:hover,
 .dark .editor-sidebar::-webkit-scrollbar-thumb:hover,
 .dark .legend-content::-webkit-scrollbar-thumb:hover {
   background: var(--edition-gray-600);
+}
+
+/* ============================================
+   MODAL DE CONFIRMATION (remplace window.confirm)
+   Non bloquante, ne bloque pas la saisie
+   ============================================ */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+.confirm-modal {
+  background: var(--edition-gray-50);
+  border: 1px solid var(--edition-gray-300);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xl);
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+}
+
+.dark .confirm-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.dark .confirm-modal {
+  background: var(--edition-gray-200);
+  border-color: var(--edition-gray-400);
+}
+
+.confirm-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 1.5rem;
+}
+
+.confirm-modal--danger .confirm-modal-icon {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--edition-danger);
+}
+
+.confirm-modal--warning .confirm-modal-icon {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--edition-warning);
+}
+
+.confirm-modal--info .confirm-modal-icon {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--edition-info);
+}
+
+.confirm-modal-title {
+  margin: 0 0 8px 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--edition-gray-900);
+}
+
+.dark .confirm-modal-title {
+  color: var(--edition-gray-800);
+}
+
+.confirm-modal-message {
+  margin: 0 0 20px 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--edition-gray-600);
+}
+
+.dark .confirm-modal-message {
+  color: var(--edition-gray-500);
+}
+
+.confirm-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-modal-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.confirm-modal-btn--cancel {
+  background: var(--edition-gray-200);
+  color: var(--edition-gray-700);
+}
+
+.confirm-modal-btn--cancel:hover {
+  background: var(--edition-gray-300);
+  color: var(--edition-gray-800);
+}
+
+.dark .confirm-modal-btn--cancel {
+  background: var(--edition-gray-400);
+  color: var(--edition-gray-800);
+}
+
+.dark .confirm-modal-btn--cancel:hover {
+  background: var(--edition-gray-500);
+  color: var(--edition-gray-900);
+}
+
+.confirm-modal-btn--confirm {
+  background: var(--edition-danger);
+  color: white;
+}
+
+.confirm-modal-btn--confirm:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.confirm-modal--warning .confirm-modal-btn--confirm {
+  background: var(--edition-warning);
+  color: var(--edition-gray-900);
+}
+
+.confirm-modal--warning .confirm-modal-btn--confirm:hover {
+  background: #d97706;
+}
+
+.confirm-modal--info .confirm-modal-btn--confirm {
+  background: var(--edition-info);
+  color: white;
+}
+
+.confirm-modal--info .confirm-modal-btn--confirm:hover {
+  background: #2563eb;
 }

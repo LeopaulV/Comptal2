@@ -10,6 +10,8 @@ export interface Transaction {
   accountCode: string; // Code du compte (AVL, CCAL, N26, etc.)
   accountName?: string; // Nom du compte
   originalLine?: string; // Ligne CSV originale
+  /** Id du donateur si la transaction est liée à un don (page Association) */
+  donateurId?: string;
 }
 
 export interface CSVTransaction {

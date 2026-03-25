@@ -105,6 +105,7 @@ npm run build:linux
 # Build pour toutes les plateformes
 npm run build:all
 ```
+
 ## Structure du projet
 
 ```
@@ -156,4 +157,3 @@ Comptal2/
 ```
 
 **Dossiers générés** (à ne pas versionner ou ignorer) : `node_modules/`, `dist/`, `dist-electron/`, `release/` (artefacts de build).
-

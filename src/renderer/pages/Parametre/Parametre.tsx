@@ -1,25 +1,284 @@
-import React, { useState } from 'react';
-import { Settings, Palette, Folder, Database, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Palette, Folder, Database, Info, Trash2, FileSpreadsheet, UserCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import { Card } from '../../components/Common';
 import AccountManager from '../../components/Parametre/AccountManager';
 import CategoryManager from '../../components/Parametre/CategoryManager';
+import ProfileManager from '../../components/Parametre/ProfileManager';
 import { ConfigService } from '../../services/ConfigService';
 import { EditionService } from '../../services/EditionService';
+import { DataService } from '../../services/DataService';
+import { FileService } from '../../services/FileService';
 import { useLanguage } from '../../hooks/useLanguage';
+import { OnboardingService } from '../../services/OnboardingService';
+import { ProfilePaths } from '../../services/ProfilePaths';
+import { GUIDED_TOUR_START_EVENT } from '../../config/tourSteps';
+import { MenuVisibility, DEFAULT_MENU_VISIBILITY } from '../../types/Settings';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
-type ParametreTab = 'general' | 'accounts' | 'categories' | 'data' | 'about';
+type ParametreTab = 'general' | 'profiles' | 'accounts' | 'categories' | 'data' | 'about';
 
 const Parametre: React.FC = () => {
   const { t } = useTranslation();
   const { currentLanguage, changeLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<ParametreTab>('general');
+
   const [isRebuildingStats, setIsRebuildingStats] = useState(false);
+  const [dataFolderPath, setDataFolderPath] = useState<string>('./data');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [menuVisibility, setMenuVisibility] = useState<MenuVisibility>(DEFAULT_MENU_VISIBILITY);
+  const [guidedTourOnStartup, setGuidedTourOnStartup] = useState(true);
+  const [dataFiles, setDataFiles] = useState<string[]>([]);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
+
+  // Charger le chemin de données et la visibilité du menu au montage
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await ConfigService.loadSettings();
+        setDataFolderPath(await ProfilePaths.getDataDirectory());
+        if (settings.menuVisibility) {
+          setMenuVisibility(settings.menuVisibility);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'general') return;
+    const syncGuidedTourPref = async () => {
+      try {
+        const settings = await ConfigService.loadSettings();
+        setGuidedTourOnStartup(settings.onboardingCompleted !== true);
+      } catch {
+        /* ignore */
+      }
+    };
+    syncGuidedTourPref();
+  }, [activeTab]);
+
+  // Ouvrir automatiquement l'onglet "accounts" si aucun compte n'existe (pour le didacticiel)
+  useEffect(() => {
+    const checkAndOpenAccounts = async () => {
+      const hasAccounts = await OnboardingService.hasUserAccounts();
+      if (!hasAccounts) {
+        setActiveTab('accounts');
+      }
+    };
+    checkAndOpenAccounts();
+  }, []); // Ne s'exécute qu'une fois au montage
+
+  // Charger la liste des fichiers du dossier data quand l'onglet Données est actif
+  useEffect(() => {
+    if (activeTab !== 'data') return;
+    const loadDataFiles = async () => {
+      try {
+        const files = await FileService.readDirectory(dataFolderPath);
+        setDataFiles(files.sort());
+      } catch (error: any) {
+        console.error('Erreur chargement fichiers data:', error);
+        setDataFiles([]);
+      }
+    };
+    loadDataFiles();
+  }, [activeTab, dataFolderPath]);
+
+  const handleGuidedTourOnStartupChange = async (checked: boolean) => {
+    try {
+      const settings = await ConfigService.loadSettings();
+      settings.onboardingCompleted = !checked;
+      await ConfigService.saveSettings(settings);
+      setGuidedTourOnStartup(checked);
+      toast.success(t('settings.guidedTourSaveSuccess'));
+    } catch (error: any) {
+      toast.error(t('settings.guidedTourSaveError', { error: error.message }));
+    }
+  };
+
+  const handleStartGuidedTourNow = () => {
+    window.dispatchEvent(new Event(GUIDED_TOUR_START_EVENT));
+    toast.info(t('settings.guidedTourLaunchHint'));
+  };
+
+  // Handler pour mettre à jour la visibilité du menu
+  const handleMenuVisibilityChange = async (key: keyof MenuVisibility, value: boolean) => {
+    try {
+      const newVisibility = { ...menuVisibility, [key]: value };
+      setMenuVisibility(newVisibility);
+      
+      const settings = await ConfigService.loadSettings();
+      settings.menuVisibility = newVisibility;
+      await ConfigService.saveSettings(settings);
+      
+      // Recharger la page pour appliquer les changements dans le menu
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Erreur lors de la sauvegarde de la visibilité du menu:', error);
+      alert(t('settings.menuVisibilityError', { error: error.message }));
+    }
+  };
+
+  // Handler pour exporter la configuration
+  const handleExportConfig = async () => {
+    setIsExporting(true);
+    try {
+      // Charger toutes les configurations
+      const accounts = await ConfigService.loadAccounts();
+      const categories = await ConfigService.loadCategories();
+      const settings = await ConfigService.loadSettings();
+      const autoCategorisation = await ConfigService.loadAutoCategorisationStats();
+      const colorPalettes = await ConfigService.loadColorPalettes();
+
+      // Créer l'objet de configuration complet
+      const config = {
+        version: '1.1.0',
+        exportDate: new Date().toISOString(),
+        accounts,
+        categories,
+        settings,
+        autoCategorisation,
+        colorPalettes,
+      };
+
+      const configJson = JSON.stringify(config, null, 2);
+
+      // Demander où sauvegarder le fichier
+      const result = await window.electronAPI.saveFile({
+        defaultPath: `comptal2-config-${new Date().toISOString().split('T')[0]}.json`,
+        filters: [
+          { name: 'Fichier JSON', extensions: ['json'] },
+          { name: 'Tous les fichiers', extensions: ['*'] },
+        ],
+      });
+
+      if (result.success && result.path) {
+        await window.electronAPI.writeExternalFile(result.path, configJson);
+        alert(t('settings.exportSuccess', { path: result.path }));
+      } else if (!result.canceled) {
+        alert(t('settings.exportError', { error: result.error || 'Erreur inconnue' }));
+      }
+    } catch (error: any) {
+      alert(t('settings.exportError', { error: error.message }));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Handler pour importer la configuration
+  const handleImportConfig = async () => {
+    if (!window.confirm(t('settings.importConfirm'))) {
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      // Sélectionner le fichier à importer
+      const result = await window.electronAPI.selectFile({
+        filters: [
+          { name: 'Fichier JSON', extensions: ['json'] },
+          { name: 'Tous les fichiers', extensions: ['*'] },
+        ],
+      });
+
+      if (result.success && result.path) {
+        // Lire le fichier
+        const fileResult = await window.electronAPI.readExternalFile(result.path);
+        if (!fileResult.success || !fileResult.data) {
+          throw new Error(fileResult.error || 'Impossible de lire le fichier');
+        }
+
+        // Parser le JSON
+        const config = JSON.parse(fileResult.data);
+
+        // Vérifier la structure du fichier
+        if (!config.version) {
+          throw new Error('Format de fichier invalide : version manquante');
+        }
+
+        // Restaurer les configurations
+        if (config.accounts) {
+          await ConfigService.saveAccounts(config.accounts);
+        }
+        if (config.categories) {
+          await ConfigService.saveCategories(config.categories);
+        }
+        if (config.settings) {
+          const dataDir = await ProfilePaths.getDataDirectory();
+          await ConfigService.saveSettings({ ...config.settings, dataDirectory: dataDir });
+          setDataFolderPath(dataDir);
+        }
+        if (config.autoCategorisation) {
+          await ConfigService.saveAutoCategorisationStats(config.autoCategorisation);
+        }
+        if (config.colorPalettes) {
+          await ConfigService.saveColorPalettes(config.colorPalettes);
+        }
+
+        // Vider le cache pour forcer le rechargement
+        ConfigService.clearCache();
+
+        alert(t('settings.importSuccess'));
+        // Recharger la page pour appliquer les changements
+        window.location.reload();
+      } else if (!result.canceled) {
+        alert(t('settings.importError', { error: result.error || 'Erreur inconnue' }));
+      }
+    } catch (error: any) {
+      alert(t('settings.importError', { error: error.message }));
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Handler pour réinitialiser l'application
+  const handleResetApp = async () => {
+    const confirmMessage = t('settings.resetAppConfirm');
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    const doubleConfirmMessage = t('settings.resetAppDoubleConfirm');
+    const userInput = window.prompt(doubleConfirmMessage);
+    if (userInput !== 'CONFIRMER' && userInput !== 'CONFIRM') {
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      // Réinitialiser toutes les configurations
+      await ConfigService.saveAccounts({});
+      await ConfigService.saveCategories({});
+      await ConfigService.saveAutoCategorisationStats({});
+      await ConfigService.saveColorPalettes([]);
+      
+      // Réinitialiser les settings aux valeurs par défaut
+      const defaultSettings = await ConfigService.loadSettings();
+      defaultSettings.onboardingCompleted = false;
+      await ConfigService.saveSettings(defaultSettings);
+
+      // Vider le cache
+      ConfigService.clearCache();
+
+      alert(t('settings.resetAppSuccess'));
+      // Recharger la page
+      window.location.reload();
+    } catch (error: any) {
+      alert(t('settings.resetAppError', { error: error.message }));
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const tabs = [
     { id: 'general' as const, label: t('settings.general'), icon: Settings },
+    { id: 'profiles' as const, label: t('settings.profiles'), icon: UserCircle },
     { id: 'accounts' as const, label: t('settings.accounts'), icon: Database },
     { id: 'categories' as const, label: t('settings.categories'), icon: Palette },
     { id: 'data' as const, label: t('settings.data'), icon: Folder },
@@ -46,6 +305,7 @@ const Parametre: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              data-tour-tab={tab.id}
               className={`
                 flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2
                 ${activeTab === tab.id
@@ -71,11 +331,12 @@ const Parametre: React.FC = () => {
               </label>
               <select 
                 value={currentLanguage}
-                onChange={(e) => changeLanguage(e.target.value as 'fr' | 'en')}
+                onChange={(e) => changeLanguage(e.target.value as 'fr' | 'en' | 'de')}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                 <option value="fr">Français</option>
                 <option value="en">English</option>
+                <option value="de">Deutsch</option>
               </select>
             </div>
 
@@ -102,9 +363,142 @@ const Parametre: React.FC = () => {
                 {t('settings.showBalance')}
               </label>
             </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                {t('settings.guidedTourSection')}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                {t('settings.guidedTourOnStartupDescription')}
+              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="guided-tour-startup"
+                    checked={guidedTourOnStartup}
+                    onChange={(e) => handleGuidedTourOnStartupChange(e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="guided-tour-startup" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('settings.guidedTourOnStartup')}
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStartGuidedTourNow}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors whitespace-nowrap"
+                >
+                  {t('settings.guidedTourStartNow')}
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                {t('settings.menuVisibility')}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {t('settings.menuVisibilityDescription')}
+              </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-dashboard"
+                    checked={menuVisibility.dashboard}
+                    onChange={(e) => handleMenuVisibilityChange('dashboard', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-dashboard" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.dashboard')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-upload"
+                    checked={menuVisibility.upload}
+                    onChange={(e) => handleMenuVisibilityChange('upload', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-upload" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.import')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-edition"
+                    checked={menuVisibility.edition}
+                    onChange={(e) => handleMenuVisibilityChange('edition', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-edition" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.edition')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-finance-global"
+                    checked={menuVisibility.financeGlobal}
+                    onChange={(e) => handleMenuVisibilityChange('financeGlobal', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-finance-global" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.financeGlobal')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-project-management"
+                    checked={menuVisibility.projectManagement}
+                    onChange={(e) => handleMenuVisibilityChange('projectManagement', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-project-management" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.projectManagement')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-invoicing"
+                    checked={menuVisibility.invoicing}
+                    onChange={(e) => handleMenuVisibilityChange('invoicing', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-invoicing" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.invoicing')}
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="menu-association"
+                    checked={menuVisibility.association}
+                    onChange={(e) => handleMenuVisibilityChange('association', e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="menu-association" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('navigation.association')}
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
         </Card>
       )}
+
+      {activeTab === 'profiles' && <ProfileManager />}
 
       {activeTab === 'accounts' && (
         <Card title={t('settings.accountManagement')} subtitle={t('settings.accountManagementSubtitle')}>
@@ -126,20 +520,16 @@ const Parametre: React.FC = () => {
                 {t('settings.dataFolder')}
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {t('settings.dataFolderDescription')}
+                {t('settings.dataFolderDescription')} (dossier du profil actif, chemin relatif à l’application)
               </p>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  value="./data"
+                  value={dataFolderPath}
                   readOnly
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                            bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
-                <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300
-                                 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                  {t('settings.browse')}
-                </button>
               </div>
             </div>
 
@@ -151,13 +541,19 @@ const Parametre: React.FC = () => {
                 {t('settings.backupRestoreDescription')}
               </p>
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-primary-600 text-white rounded-lg
-                                 hover:bg-primary-700 transition-colors">
-                  {t('settings.exportConfig')}
+                <button 
+                  onClick={handleExportConfig}
+                  disabled={isExporting}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg
+                                 hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isExporting ? t('settings.exporting') : t('settings.exportConfig')}
                 </button>
-                <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300
-                                 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                  {t('settings.importConfig')}
+                <button 
+                  onClick={handleImportConfig}
+                  disabled={isImporting}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300
+                                 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {isImporting ? t('settings.importing') : t('settings.importConfig')}
                 </button>
               </div>
             </div>
@@ -225,10 +621,72 @@ const Parametre: React.FC = () => {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 {t('settings.dangerZoneDescription')}
               </p>
-              <button className="px-4 py-2 bg-red-600 text-white rounded-lg
-                               hover:bg-red-700 transition-colors">
-                {t('settings.resetApp')}
+              <button 
+                onClick={handleResetApp}
+                disabled={isResetting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg
+                               hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {isResetting ? t('settings.resetting') : t('settings.resetApp')}
               </button>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                {t('settings.dataFilesList')}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                {t('settings.dataFilesListDescription')}
+              </p>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 max-h-64 overflow-y-auto">
+                {dataFiles.length === 0 ? (
+                  <p className="p-4 text-sm text-gray-500 dark:text-gray-400">
+                    {t('settings.dataFilesEmpty')}
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                    {dataFiles.map((fileName) => {
+                      const isCsv = fileName.toLowerCase().endsWith('.csv');
+                      const fullPath = `${dataFolderPath.replace(/\/$/, '')}/${fileName}`;
+                      return (
+                        <li
+                          key={fileName}
+                          className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                        >
+                          <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 truncate min-w-0">
+                            {isCsv ? (
+                              <FileSpreadsheet className="flex-shrink-0 w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : null}
+                            {fileName}
+                          </span>
+                          {isCsv && (
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(t('settings.dataFileDeleteConfirm', { file: fileName }))) return;
+                                setDeletingFile(fileName);
+                                try {
+                                  await FileService.deleteFile(fullPath);
+                                  setDataFiles((prev) => prev.filter((f) => f !== fileName));
+                                  ConfigService.clearCache();
+                                  await DataService.reload();
+                                } catch (error: any) {
+                                  alert(t('settings.dataFileDeleteError', { error: error.message }));
+                                } finally {
+                                  setDeletingFile(null);
+                                }
+                              }}
+                              disabled={deletingFile === fileName}
+                              className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-50"
+                              title={t('settings.dataFileDelete')}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </Card>

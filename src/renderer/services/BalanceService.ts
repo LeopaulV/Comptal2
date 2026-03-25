@@ -1,6 +1,8 @@
 // Service pour gérer les soldes initiaux des comptes
 
 import { FileService } from './FileService';
+import { ProfilePaths } from './ProfilePaths';
+import { DataService } from './DataService';
 import { parse, format, isValid } from 'date-fns';
 import Papa from 'papaparse';
 
@@ -25,7 +27,7 @@ export class BalanceService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/solde_compte.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('solde_compte.json'));
       this.balanceCache = JSON.parse(content);
       return this.balanceCache!;
     } catch (error: any) {
@@ -42,7 +44,7 @@ export class BalanceService {
   static async saveBalances(balances: BalanceData): Promise<void> {
     try {
       const content = JSON.stringify(balances, null, 2);
-      await FileService.writeFile('parametre/solde_compte.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('solde_compte.json'), content);
       this.balanceCache = balances;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des soldes: ${error.message}`);
@@ -181,8 +183,9 @@ export class BalanceService {
     try {
       console.log(`[Import] Recherche solde initial dans CSV pour ${accountCode} avant ${startDate}`);
       
-      // Lister tous les fichiers CSV dans le dossier data
-      const files = await FileService.readDirectory('data');
+      const dataDirectory = await ProfilePaths.getDataDirectory();
+      // Lister tous les fichiers CSV dans le dossier de données
+      const files = await FileService.readDirectory(dataDirectory);
       const csvFiles = files.filter(file => file.endsWith('.csv'));
       
       console.log(`[Import] ${csvFiles.length} fichiers CSV trouvés`);
@@ -237,7 +240,8 @@ export class BalanceService {
 
       // Lire le fichier CSV et extraire le dernier solde
       try {
-        const content = await FileService.readFile(`data/${mostRecentFile.fileName}`);
+        const dataDirectory = await ProfilePaths.getDataDirectory();
+        const content = await FileService.readFile(`${dataDirectory}/${mostRecentFile.fileName}`);
         
         return new Promise((resolve) => {
           Papa.parse(content, {
@@ -281,6 +285,58 @@ export class BalanceService {
       }
     } catch (error: any) {
       console.error(`[Import] Erreur lors de la recherche du solde dans CSV:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Récupère le dernier solde connu d'un compte, quelle que soit la date
+   * Cherche d'abord dans les transactions CSV, puis dans les soldes initiaux
+   * Retourne null si aucun solde n'est trouvé
+   */
+  static async getLastKnownBalance(accountCode: string): Promise<number | null> {
+    try {
+      // D'abord, essayer de récupérer depuis les transactions CSV
+      const transactions = await DataService.getTransactions();
+      
+      // Filtrer les transactions du compte et trouver la plus récente avec un solde
+      const accountTransactions = transactions
+        .filter(t => t.accountCode === accountCode && t.balance !== undefined && t.balance !== null)
+        .sort((a, b) => b.date.getTime() - a.date.getTime()); // Tri décroissant par date
+      
+      if (accountTransactions.length > 0) {
+        const lastTransaction = accountTransactions[0];
+        console.log(`[BalanceService] Dernier solde trouvé dans CSV pour ${accountCode}: ${lastTransaction.balance} € (date: ${format(lastTransaction.date, 'dd/MM/yyyy')})`);
+        return lastTransaction.balance!;
+      }
+      
+      // Si pas trouvé dans CSV, chercher dans les soldes initiaux (le plus récent)
+      const balances = await this.loadBalances();
+      
+      if (!balances[accountCode] || balances[accountCode].length === 0) {
+        console.log(`[BalanceService] Aucun solde trouvé pour ${accountCode}`);
+        return null;
+      }
+      
+      // Trier par date décroissante et prendre le plus récent
+      const accountEntries = balances[accountCode]
+        .map(entry => ({
+          date: parse(entry.date, 'dd/MM/yyyy', new Date()),
+          solde: parseFloat(entry.solde),
+        }))
+        .filter(entry => isValid(entry.date))
+        .sort((a, b) => b.date.getTime() - a.date.getTime()); // Tri décroissant
+      
+      if (accountEntries.length > 0) {
+        const lastEntry = accountEntries[0];
+        console.log(`[BalanceService] Dernier solde trouvé dans solde_compte.json pour ${accountCode}: ${lastEntry.solde} € (date: ${format(lastEntry.date, 'dd/MM/yyyy')})`);
+        return lastEntry.solde;
+      }
+      
+      console.log(`[BalanceService] Aucun solde trouvé pour ${accountCode}`);
+      return null;
+    } catch (error: any) {
+      console.error(`[BalanceService] Erreur lors de la récupération du dernier solde pour ${accountCode}:`, error);
       return null;
     }
   }

@@ -1,14 +1,27 @@
 // Types pour les paramètres de l'application
 
+export interface MenuVisibility {
+  dashboard: boolean;
+  upload: boolean;
+  edition: boolean;
+  financeGlobal: boolean;
+  projectManagement: boolean;
+  invoicing: boolean;
+  association: boolean;
+  // parametre est toujours visible, donc pas besoin de l'inclure
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'auto';
-  language: 'fr' | 'en';
+  language: 'fr' | 'en' | 'de';
   currency: string;
   dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   dataDirectory: string;
   autoSave: boolean;
   showBalance: boolean;
   defaultView: 'dashboard' | 'edition' | 'finance-global';
+  onboardingCompleted?: boolean;
+  menuVisibility?: MenuVisibility;
 }
 
 export interface ColorScheme {
@@ -19,6 +32,16 @@ export interface ColorScheme {
   text: string;
 }
 
+export const DEFAULT_MENU_VISIBILITY: MenuVisibility = {
+  dashboard: true,
+  upload: true,
+  edition: true,
+  financeGlobal: true,
+  projectManagement: true,
+  invoicing: true,
+  association: true,
+};
+
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
   language: 'fr',
@@ -28,5 +51,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoSave: true,
   showBalance: true,
   defaultView: 'dashboard',
+  onboardingCompleted: false,
+  menuVisibility: DEFAULT_MENU_VISIBILITY,
 };
 

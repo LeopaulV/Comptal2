@@ -3,7 +3,8 @@
 import Papa from 'papaparse';
 import { FileService } from './FileService';
 import { ConfigService } from './ConfigService';
-import { EditionRow, EditionData } from '../types/Edition';
+import { ProfilePaths } from './ProfilePaths';
+import { EditionRow, EditionData, DuplicateRowEntry } from '../types/Edition';
 import { parse, isValid } from 'date-fns';
 import { AutoCategorisationService } from './AutoCategorisationService';
 
@@ -118,38 +119,35 @@ export class EditionService {
       // Charger les comptes bancaires pour filtrer les sources
       const bankAccounts = await ConfigService.loadAccounts();
       
-      // Lire tous les fichiers CSV du dossier data
-      let files: string[] = [];
-      try {
-        files = await FileService.readDirectory('data');
-      } catch (error: any) {
-        // Si le dossier n'existe pas ou est vide, retourner une structure vide
-        const errorMessage = error.message || String(error);
-        if (errorMessage.includes('non trouvé') || errorMessage.includes('n\'existe pas') || errorMessage.includes('does not exist')) {
-          console.warn('[EditionService] Le dossier data/ n\'existe pas ou est vide. Retour d\'une structure vide.');
-          return {
-            headers: this.REQUIRED_COLUMNS,
-            rows: [],
-          };
-        }
-        // Pour les autres erreurs, relancer
-        throw error;
+      const dataDirectory = await ProfilePaths.getDataDirectory();
+      
+      // Lire tous les fichiers CSV du dossier de données
+      const files = await FileService.readDirectoryOptional(dataDirectory);
+      if (files === null) {
+        console.warn(`[EditionService] Le dossier ${dataDirectory} n'existe pas encore. Retour d'une structure vide.`);
+        return {
+          headers: this.REQUIRED_COLUMNS,
+          rows: [],
+          ignoredFiles: undefined,
+        };
       }
       
       const csvFiles = files.filter(file => file.endsWith('.csv'));
 
       // Si aucun fichier CSV n'est trouvé, retourner une structure vide
       if (csvFiles.length === 0) {
-        console.warn('[EditionService] Aucun fichier CSV trouvé dans le dossier data/. Retour d\'une structure vide.');
+        console.warn(`[EditionService] Aucun fichier CSV trouvé dans le dossier ${dataDirectory}. Retour d'une structure vide.`);
         return {
           headers: this.REQUIRED_COLUMNS,
           rows: [],
+          ignoredFiles: undefined,
         };
       }
 
       const allRows: EditionRow[] = [];
       const fileMapping: Record<string, string> = {};
       let detectedHeaders: string[] = []; // Headers détectés dynamiquement
+      const ignoredFiles: Array<{ fileName: string; accountCode: string }> = []; // Fichiers ignorés
 
       // Créer un mapping nom complet -> nom complet (identité)
       // Cela évite les collisions quand plusieurs fichiers ont la même période de dates
@@ -160,7 +158,7 @@ export class EditionService {
       // Charger et parser chaque fichier CSV
       for (const fileName of csvFiles) {
         try {
-          const filePath = `data/${fileName}`;
+          const filePath = `${dataDirectory}/${fileName}`;
           const content = await FileService.readFile(filePath);
 
           // Extraire le préfixe du compte depuis le nom de fichier (comme Comptal1)
@@ -169,6 +167,7 @@ export class EditionService {
           // Vérifier que le compte existe dans les comptes bancaires connus
           if (!(accountPrefix in bankAccounts)) {
             console.warn(`[EditionService] Compte ${accountPrefix} non trouvé dans les comptes valides, fichier ${fileName} ignoré`);
+            ignoredFiles.push({ fileName, accountCode: accountPrefix });
             continue;
           }
 
@@ -288,12 +287,14 @@ export class EditionService {
         return {
           headers: finalHeaders.length > 0 ? finalHeaders : this.REQUIRED_COLUMNS,
           rows: [],
+          ignoredFiles: ignoredFiles.length > 0 ? ignoredFiles : undefined,
         };
       }
 
       return {
         headers: finalHeaders,
         rows: deduplicatedRows,
+        ignoredFiles: ignoredFiles.length > 0 ? ignoredFiles : undefined,
       };
     } catch (error: any) {
       // En cas d'erreur, retourner une structure vide au lieu de lancer une erreur
@@ -301,6 +302,7 @@ export class EditionService {
       return {
         headers: this.REQUIRED_COLUMNS,
         rows: [],
+        ignoredFiles: undefined,
       };
     }
   }
@@ -310,6 +312,8 @@ export class EditionService {
    */
   static async saveEditionData(rows: EditionRow[]): Promise<void> {
     try {
+      const dataDirectory = await ProfilePaths.getDataDirectory();
+      
       // Filtrer les lignes actives (non supprimées)
       const activeRows = rows.filter(row => !row.deleted);
 
@@ -360,8 +364,13 @@ export class EditionService {
         groupedData[source].push(row);
       }
 
-      // Sauvegarder chaque fichier séparément
-      for (const [source, fileRows] of Object.entries(groupedData)) {
+      // Fonction helper pour permettre au navigateur de traiter les événements
+      const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 0));
+
+      // Sauvegarder chaque fichier séparément avec des pauses pour permettre au navigateur de respirer
+      const fileEntries = Object.entries(groupedData);
+      for (let i = 0; i < fileEntries.length; i++) {
+        const [source, fileRows] = fileEntries[i];
         try {
           // Si le fichier est vide (toutes les lignes supprimées), passer au suivant
           if (fileRows.length === 0) {
@@ -480,9 +489,12 @@ export class EditionService {
                 });
 
                 // Sauvegarder le fichier
-                const filePath = `data/${newSource}`;
+                const filePath = `${dataDirectory}/${newSource}`;
                 await FileService.writeFile(filePath, csv);
                 console.log(`[EditionService] Fichier ${newSource} sauvegardé avec succès (${compteRows.length} lignes)`);
+                
+                // Permettre au navigateur de traiter les événements après chaque sauvegarde
+                await yieldToBrowser();
               }
 
               // Continuer avec le fichier suivant (les lignes incohérentes ont été séparées)
@@ -538,10 +550,16 @@ export class EditionService {
           });
 
           // Sauvegarder le fichier
-          const filePath = `data/${source}`;
+          const filePath = `${dataDirectory}/${source}`;
           await FileService.writeFile(filePath, csv);
 
           console.log(`[EditionService] Fichier ${source} sauvegardé avec succès (${fileRows.length} lignes)`);
+          
+          // Permettre au navigateur de traiter les événements après chaque sauvegarde
+          // Sauf pour le dernier fichier
+          if (i < fileEntries.length - 1) {
+            await yieldToBrowser();
+          }
         } catch (error: any) {
           console.error(`Erreur lors de la sauvegarde du fichier ${source}:`, error);
           throw new Error(`Erreur lors de la sauvegarde du fichier ${source}: ${error.message}`);
@@ -562,7 +580,11 @@ export class EditionService {
     inconsistenciesFixed: number;
   }> {
     try {
-      const files = await FileService.readDirectory('data');
+      // Charger le chemin du dossier de données depuis les settings
+      const settings = await ConfigService.loadSettings();
+      const dataDirectory = settings.dataDirectory || 'data';
+      
+      const files = await FileService.readDirectory(dataDirectory);
       const csvFiles = files.filter(file => file.endsWith('.csv'));
       const bankAccounts = await ConfigService.loadAccounts();
       
@@ -572,7 +594,7 @@ export class EditionService {
 
       for (const fileName of csvFiles) {
         try {
-          const filePath = `data/${fileName}`;
+          const filePath = `${dataDirectory}/${fileName}`;
           const content = await FileService.readFile(filePath);
           
           const result = await new Promise<any>((resolve) => {
@@ -652,6 +674,148 @@ export class EditionService {
       console.error('Erreur lors du nettoyage des fichiers:', error);
       throw new Error(`Erreur lors du nettoyage: ${error.message}`);
     }
+  }
+
+  /**
+   * Retourne la liste des lignes en doublon (à supprimer) pour affichage dans la modale.
+   * Pour chaque groupe de doublons, la première occurrence est conservée, les suivantes sont listées.
+   */
+  static async getDuplicatesPreview(): Promise<{
+    duplicates: DuplicateRowEntry[];
+    inconsistenciesCount: number;
+  }> {
+    const dataDirectory = await ProfilePaths.getDataDirectory();
+    const files = await FileService.readDirectory(dataDirectory);
+    const csvFiles = files.filter(file => file.endsWith('.csv'));
+    const bankAccounts = await ConfigService.loadAccounts();
+
+    const duplicates: DuplicateRowEntry[] = [];
+    let inconsistenciesCount = 0;
+
+    for (const fileName of csvFiles) {
+      try {
+        const filePath = `${dataDirectory}/${fileName}`;
+        const content = await FileService.readFile(filePath);
+        const result = await new Promise<any>((resolve) => {
+          Papa.parse(content, {
+            header: true,
+            delimiter: this.DELIMITER,
+            skipEmptyLines: true,
+            complete: resolve,
+          });
+        });
+
+        const rows = result.data as any[];
+        const prefix = this.extractAccountPrefix(fileName);
+        if (!(prefix in bankAccounts)) continue;
+
+        const accountData = bankAccounts[prefix];
+        const expectedAccount =
+          typeof accountData === 'object' && accountData !== null && 'name' in accountData
+            ? accountData.name
+            : String(accountData || prefix);
+
+        const seen = new Set<string>();
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const key = `${row.Date}|${row['Date de valeur']}|${row.Libellé}|${row.Débit}|${row.Crédit}`;
+          if (row.Compte !== expectedAccount) inconsistenciesCount++;
+          if (seen.has(key)) {
+            duplicates.push({
+              id: `${fileName}|${i}`,
+              fileName,
+              rowIndex: i,
+              row: { ...row },
+            });
+          } else {
+            seen.add(key);
+          }
+        }
+      } catch (error: any) {
+        console.error(`[EditionService] Erreur getDuplicatesPreview ${fileName}:`, error);
+      }
+    }
+
+    return { duplicates, inconsistenciesCount };
+  }
+
+  /**
+   * Supprime les doublons sélectionnés (ids au format "fileName|rowIndex") et corrige Compte/Source.
+   */
+  static async removeSelectedDuplicates(ids: string[]): Promise<{
+    removed: number;
+    filesProcessed: number;
+    inconsistenciesFixed: number;
+  }> {
+    if (ids.length === 0) {
+      return { removed: 0, filesProcessed: 0, inconsistenciesFixed: 0 };
+    }
+
+    const byFile = new Map<string, Set<number>>();
+    for (const id of ids) {
+      const lastPipe = id.lastIndexOf('|');
+      if (lastPipe === -1) continue;
+      const fileName = id.slice(0, lastPipe);
+      const rowIndex = parseInt(id.slice(lastPipe + 1), 10);
+      if (isNaN(rowIndex)) continue;
+      if (!byFile.has(fileName)) byFile.set(fileName, new Set());
+      byFile.get(fileName)!.add(rowIndex);
+    }
+
+    const dataDirectory = await ProfilePaths.getDataDirectory();
+    const bankAccounts = await ConfigService.loadAccounts();
+
+    let removed = 0;
+    let filesProcessed = 0;
+    let inconsistenciesFixed = 0;
+
+    for (const [fileName, indicesToRemove] of byFile) {
+      try {
+        const filePath = `${dataDirectory}/${fileName}`;
+        const content = await FileService.readFile(filePath);
+        const result = await new Promise<any>((resolve) => {
+          Papa.parse(content, {
+            header: true,
+            delimiter: this.DELIMITER,
+            skipEmptyLines: true,
+            complete: resolve,
+          });
+        });
+
+        const rows = result.data as any[];
+        const prefix = this.extractAccountPrefix(fileName);
+        if (!(prefix in bankAccounts)) continue;
+
+        const accountData = bankAccounts[prefix];
+        const expectedAccount =
+          typeof accountData === 'object' && accountData !== null && 'name' in accountData
+            ? accountData.name
+            : String(accountData || prefix);
+
+        const kept = rows
+          .map((row, i) => {
+            if (indicesToRemove.has(i)) {
+              removed++;
+              return null;
+            }
+            if (row.Compte !== expectedAccount) {
+              inconsistenciesFixed++;
+              row.Compte = expectedAccount;
+            }
+            row.Source = fileName;
+            return row;
+          })
+          .filter(Boolean);
+
+        const csv = Papa.unparse(kept, { delimiter: this.DELIMITER, header: true });
+        await FileService.writeFile(filePath, csv);
+        filesProcessed++;
+      } catch (error: any) {
+        console.error(`[EditionService] Erreur removeSelectedDuplicates ${fileName}:`, error);
+      }
+    }
+
+    return { removed, filesProcessed, inconsistenciesFixed };
   }
 
   /**

@@ -1,0 +1,34 @@
+---
+description: Interdit l'utilisation des popups bloquantes window.confirm et window.alert
+alwaysApply: true
+---
+
+# Règle : pas de window.confirm ni window.alert
+
+Ne jamais utiliser `window.confirm()` ni `window.alert()` (ou `confirm()` / `alert()` sans préfixe).
+
+**Raison** : Ces fenêtres modales natives bloquent la saisie de texte et l'interaction avec l'application. Elles bloquent le thread principal du navigateur.
+
+**Alternatives** :
+
+- **Confirmations** : Utiliser le composant `ConfirmModal` (dans `components/Common`) pour les demandes de confirmation (ex. suppression). Modal HTML/CSS non bloquante.
+- **Messages d'erreur / info** : Utiliser `toast` de react-toastify pour les notifications (erreurs, succès, avertissements).
+
+**Exemple** :
+
+```tsx
+// Interdit
+if (confirm('Êtes-vous sûr ?')) { ... }
+alert('Erreur');
+
+// Correct
+<ConfirmModal
+  isOpen={showConfirm}
+  title="Supprimer"
+  message="Êtes-vous sûr de vouloir supprimer ?"
+  onConfirm={handleConfirm}
+  onCancel={() => setShowConfirm(false)}
+/>
+// ou
+toast.error('Erreur lors de la sauvegarde');
+```

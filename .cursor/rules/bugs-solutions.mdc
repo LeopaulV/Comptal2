@@ -1,0 +1,112 @@
+---
+description: Répertoire des bugs signalés et leurs solutions — à consulter dès que l'utilisateur mentionne "bug"
+alwaysApply: true
+---
+
+# Bugs et solutions (Comptal2)
+
+Cette règle recense les bugs signalés par l'utilisateur et leurs solutions validées. **Consulter cette liste dès que l'utilisateur mentionne le terme "bug"** pour réutiliser les solutions efficaces.
+
+---
+
+## Bug 1 : Erreur "Unexpected ]" dans BilanPDFService + "Component is not a function"
+
+**Symptôme** :
+- Erreur Vite : `BilanPDFService.ts:272:4: ERROR: Unexpected "]"`
+- Erreur React : `Component is not a function` dans FinanceGlobal
+
+**Cause** : Dans `content.push(...)`, la parenthèse de l’appel à `push` était fermée par `];` au lieu de `);`, ce qui provoquait une erreur de syntaxe. Comme BilanPDFService est importé via `services/index.ts` dans FinanceGlobal, le module ne se chargeait pas et FinanceGlobal devenait `undefined`, d’où l’erreur React.
+
+**Solution** : Fermer correctement l’appel à `push` avec `);` et non `];`.
+
+```typescript
+// Avant (incorrect)
+content.push(
+  { ... },
+  { ... },
+];   // ❌ ferme un tableau au lieu de l'appel push
+
+// Après (correct)
+content.push(
+  { ... },
+  { ... },
+);   // ✅ ferme l'appel à push
+```
+
+**Fichier** : `src/renderer/services/BilanPDFService.ts`
+
+---
+
+## Bug 2 : Bloc blanc recouvrant les colonnes de données (tableaux Bilan)
+
+**Symptôme** : Un grand bloc blanc opaque recouvre la partie droite du tableau (colonnes de montants). Les lignes de grille et le texte (ex. « 7,95 € », « - ») sont à peine visibles derrière.
+
+**Cause** : Le pseudo-élément `::before` de `.finance-global-table-container` sert d’overlay derrière les colonnes fixes (`background-color: #ffffff`, `width: 470px`, `z-index: 4`). Cette largeur est prévue pour les tableaux à 4 colonnes fixes (mensuel / solde). Le tableau Bilan n’a que **2 colonnes fixes** (Type + Catégorie ≈ 270px), donc l’overlay dépassait et masquait les colonnes scrollables.
+
+**Solution** : Adapter la largeur du `::before` et la position du `::after` selon le type de tableau via des classes modificateurs.
+
+- **Tableau Bilan** (2 colonnes fixes : Type 70px + Catégorie 200px) : `::before { width: 270px; }`, `::after { left: 270px; }`.
+- **Tableau Bilan total / récap** (1 colonne fixe : Catégorie 70px) : `::before { width: 70px; }`, `::after { left: 70px; }`.
+- Conserver les mêmes ajustements dans les media queries (1200px, 768px) pour le Bilan.
+
+```css
+/* Tableau Bilan : 2 colonnes fixes */
+.finance-global-table-container.finance-global-table-bilan::before {
+  width: 270px;
+}
+.finance-global-table-container.finance-global-table-bilan::after {
+  left: 270px;
+}
+
+/* Tableau Bilan total (récap) : 1 colonne fixe */
+.finance-global-table-container.bilan-recap-table::before {
+  width: 70px;
+}
+.finance-global-table-container.bilan-recap-table::after {
+  left: 70px;
+}
+```
+
+**Fichier** : `src/renderer/styles/finance-global-custom.css`
+
+---
+
+## Bug 3 : Colonnes des tableaux PDF Bilan qui débordent de la page
+
+**Symptôme** : Les colonnes de données (mois ou catégories) sortent du tableau et dépassent le bord droit de la page A4 paysage dans le PDF exporté.
+
+**Cause** : Deux erreurs cumulatives dans `BilanPDFService.ts` :
+1. `Math.max(24, Math.floor(...))` — impose un minimum de 24pt par colonne-mois. Avec beaucoup de périodes (ex : 52 semaines), `52 × 24 = 1248pt` >> 762pt disponibles en paysage.
+2. `Math.max(40, Math.floor(...))` — même problème pour les colonnes du tableau récap (ex : 20 catégories × 40pt = 800pt > 762pt).
+3. L'utilisation de `'*'` pour la colonne Catégorie ne comprime pas les colonnes fixes déjà trop larges.
+
+**Solution** : Calculer toutes les largeurs sans minimum imposé, en s'assurant que la somme des largeurs = W_LANDSCAPE exactement. La colonne Catégorie/Total absorbe le résidu dû aux arrondis.
+
+```typescript
+// Colonnes mois
+const monthsSpace = W_LANDSCAPE - TYPE_W - CAT_W; // CAT_W fixe (ex: 80pt)
+const mW = nMonths > 0 ? Math.floor(monthsSpace / nMonths) : 50;
+const catColW = W_LANDSCAPE - TYPE_W - nMonths * mW; // résidu
+const tableWidths = [TYPE_W, catColW, ...data.months.map(() => mW)];
+
+// Colonnes récap
+const recapSpace = W_LANDSCAPE - LABEL_W - RECAP_TOTAL_W;
+const recapCatW = nCats > 0 ? Math.floor(recapSpace / nCats) : recapSpace;
+const recapTotalColW = W_LANDSCAPE - LABEL_W - nCats * recapCatW; // résidu
+const recapWidths = [LABEL_W, ...allCategories.map(() => recapCatW), recapTotalColW];
+```
+
+**Principe clé** : Ne jamais utiliser `Math.max(minPt, ...)` pour des largeurs de colonnes PDF — cela peut violer la contrainte `somme ≤ largeur_page`. Toujours calculer par division et laisser le résidu dans une colonne dédiée.
+
+**Fichier** : `src/renderer/services/BilanPDFService.ts`
+
+---
+
+## Ajout de nouveaux bugs
+
+Pour chaque nouveau bug signalé :
+!Vérifier si pas bug déjà existant du même type, ne pas faire de duplicata!
+1. Documenter le **symptôme** (message d’erreur, comportement observé)
+2. Indiquer la **cause** identifiée
+3. Décrire la **solution** avec un extrait de code si pertinent
+4. Préciser le **fichier** concerné

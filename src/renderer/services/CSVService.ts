@@ -132,7 +132,11 @@ export class CSVService {
    */
   static async loadAllTransactions(dataDirectory: string = 'data'): Promise<Transaction[]> {
     try {
-      const files = await FileService.readDirectory(dataDirectory);
+      const files = await FileService.readDirectoryOptional(dataDirectory);
+      if (files === null) {
+        console.warn(`[CSVService] Le dossier ${dataDirectory} n'existe pas encore. Retour d'un tableau vide.`);
+        return [];
+      }
       const csvFiles = files.filter(file => file.endsWith('.csv'));
 
       // Si aucun fichier CSV n'est trouvé, retourner un tableau vide

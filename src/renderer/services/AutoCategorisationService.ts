@@ -1,6 +1,6 @@
 // Service pour l'auto-catégorisation basée sur des statistiques par mot
 
-import { WordStats, WordStatsMap, CategorySuggestion } from '../types/AutoCategorisation';
+import { WordStatsMap, CategorySuggestion } from '../types/AutoCategorisation';
 
 // Constantes de configuration
 const MIN_WORD_LENGTH = 2;
@@ -131,6 +131,7 @@ export class AutoCategorisationService {
 
   /**
    * Suggère la meilleure catégorie pour un libellé donné
+   * Applique un facteur de pénalisation pour les mots inconnus et borne la confiance sur [0, 1].
    */
   static suggestBestCategory(
     label: string,
@@ -149,8 +150,21 @@ export class AutoCategorisationService {
       }
     }
 
+    // Facteur de pénalisation pour les mots inconnus (exclure les mots numériques, comme scoreCategoriesForLabel)
+    const tokens = this.tokenizeLabel(label).filter(t => !this.isNumericWord(t));
+    const totalTokens = tokens.length;
+    const knownTokens = tokens.filter(
+      t => stats[t] && stats[t].totalCount > 0
+    ).length;
+    const unknownPenaltyFactor =
+      totalTokens > 0 ? Math.pow(knownTokens / totalTokens, 2) : 1;
+
+    // Borner la confiance sur [0, 1] puis appliquer le facteur de pénalisation
+    const clampedConfidence = Math.min(1, Math.max(0, bestScore));
+    const finalConfidence = clampedConfidence * unknownPenaltyFactor;
+
     // Appliquer le seuil minimum
-    if (bestScore < MIN_SUGGESTION_SCORE) {
+    if (finalConfidence < MIN_SUGGESTION_SCORE) {
       return {
         category: null,
         scores,
@@ -161,7 +175,7 @@ export class AutoCategorisationService {
     return {
       category: bestCategory,
       scores,
-      confidence: bestScore,
+      confidence: finalConfidence,
     };
   }
 

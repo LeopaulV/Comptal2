@@ -1,0 +1,19 @@
+{
+  "NaN": {
+    "name": "Non catégorisé",
+    "color": "#ffffff"
+  },
+  "Somme des Dépenses": {
+    "name": "Somme des Dépenses",
+    "color": "#ffb3b3"
+  },
+  "X": {
+    "name": "TIC",
+    "color": "#ffffff"
+  },
+  "Somme des Revenus": {
+    "name": "Somme des Revenus",
+    "color": "#b3e0b1"
+  }
+}
+

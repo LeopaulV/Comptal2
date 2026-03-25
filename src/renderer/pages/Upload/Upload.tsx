@@ -6,12 +6,16 @@ import FileDropzone from '../../components/Upload/FileDropzone';
 import ColumnMappingInterface from '../../components/Upload/ColumnMappingInterface';
 import ExcelSheetSelector from '../../components/Upload/ExcelSheetSelector';
 import ImportPreviewTable from '../../components/Upload/ImportPreviewTable';
+import ManualDataCreator from '../../components/Upload/ManualDataCreator';
+import CreateAccountModal from '../../components/Upload/CreateAccountModal';
+import ImportHelpModal from '../../components/Upload/ImportHelpModal';
 import { FileDetectionService } from '../../services/FileDetectionService';
 import { ColumnMappingService } from '../../services/ColumnMappingService';
 import { CSVTransformService } from '../../services/CSVTransformService';
 import { ExcelSheetService } from '../../services/ExcelSheetService';
 import { BalanceService } from '../../services/BalanceService';
 import { ConfigService } from '../../services/ConfigService';
+import { ProfilePaths } from '../../services/ProfilePaths';
 import { FileService } from '../../services/FileService';
 import { DataService } from '../../services/DataService';
 import { FileAnalysisResult } from '../../types/FileAnalysis';
@@ -20,7 +24,7 @@ import { ExcelSheetInfo, SheetImportConfig } from '../../types/ExcelImport';
 import { AccountsConfig } from '../../types/Account';
 import { format, parse } from 'date-fns';
 
-type UploadStep = 'select' | 'sheet-selection' | 'analyzing' | 'analysis' | 'mapping' | 'config' | 'preview' | 'uploading' | 'success' | 'error';
+type UploadStep = 'select' | 'manual-create' | 'sheet-selection' | 'analyzing' | 'analysis' | 'mapping' | 'config' | 'preview' | 'uploading' | 'success' | 'error';
 
 const Upload: React.FC = () => {
   const { t } = useTranslation();
@@ -50,6 +54,10 @@ const Upload: React.FC = () => {
   const [currentSheetName, setCurrentSheetName] = useState<string>('');
 
   const [accounts, setAccounts] = useState<AccountsConfig>({});
+  const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
+  const [showImportHelpModal, setShowImportHelpModal] = useState(false);
+  const [createAccountContext, setCreateAccountContext] = useState<'csv' | 'excel' | 'manual' | null>(null);
+  const [newlyCreatedAccountCode, setNewlyCreatedAccountCode] = useState<string | null>(null);
 
   // Charger les comptes au montage
   useEffect(() => {
@@ -64,6 +72,18 @@ const Upload: React.FC = () => {
     loadAccounts();
   }, []);
 
+  const handleCreateAccountCreated = async (code: string) => {
+    const updated = await ConfigService.loadAccounts();
+    setAccounts(updated);
+    if (createAccountContext === 'csv') {
+      setSelectedAccountCode(code);
+    } else if (createAccountContext === 'manual') {
+      setNewlyCreatedAccountCode(code);
+    }
+    setShowCreateAccountModal(false);
+    setCreateAccountContext(null);
+  };
+
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
     
@@ -77,7 +97,7 @@ const Upload: React.FC = () => {
       type: file.type || 'non spécifié'
     });
 
-5    // Détecter si c'est un fichier Excel
+    // Détecter si c'est un fichier Excel
     const fileType = FileDetectionService.detectFileType(file.name);
     const isExcelFile = fileType === 'excel';
     setIsExcel(isExcelFile);
@@ -577,8 +597,9 @@ const Upload: React.FC = () => {
             const startDateObj = parse(config.startDate || '', 'yyyy-MM-dd', new Date());
             const endDateObj = parse(config.endDate || '', 'yyyy-MM-dd', new Date());
             const fileName = `${config.accountCode}_${format(startDateObj, 'dd.MM.yyyy')}_${format(endDateObj, 'dd.MM.yyyy')}.csv`;
+            const dataDir = await ProfilePaths.getDataDirectory();
 
-            await FileService.writeFile(`data/${fileName}`, csvContent);
+            await FileService.writeFile(`${dataDir}/${fileName}`, csvContent);
 
             // Sauvegarder le solde initial
             if (config.startDate) {
@@ -618,8 +639,9 @@ const Upload: React.FC = () => {
         setStep('error');
       }
     } else {
-      // Import CSV : workflow existant
-      if (!selectedFile || !columnMapping || !selectedAccountCode || transformedRows.length === 0) {
+      // Import CSV ou création manuelle : workflow existant
+      // Pour la création manuelle, selectedFile peut être null
+      if ((!selectedFile && transformedRows.length === 0) || !selectedAccountCode || transformedRows.length === 0) {
         return;
       }
 
@@ -635,8 +657,9 @@ const Upload: React.FC = () => {
         const startDateObj = parse(dateRange.startDate, 'yyyy-MM-dd', new Date());
         const endDateObj = parse(dateRange.endDate, 'yyyy-MM-dd', new Date());
         const fileName = `${selectedAccountCode}_${format(startDateObj, 'dd.MM.yyyy')}_${format(endDateObj, 'dd.MM.yyyy')}.csv`;
+        const dataDir = await ProfilePaths.getDataDirectory();
 
-        await FileService.writeFile(`data/${fileName}`, csvContent);
+        await FileService.writeFile(`${dataDir}/${fileName}`, csvContent);
 
         if (initialBalance !== 0 || balanceFromFile !== null) {
           const balanceToSave = balanceFromFile !== null ? balanceFromFile : initialBalance;
@@ -664,6 +687,29 @@ const Upload: React.FC = () => {
         setStep('error');
       }
     }
+  };
+
+  // Handler pour la création manuelle
+  const handleManualCreateConfirm = (
+    rows: TransformedRow[],
+    accountCode: string,
+    balance: number
+  ) => {
+    console.log('[Import] Création manuelle confirmée:', {
+      compte: accountCode,
+      transactions: rows.length,
+      soldeInitial: balance
+    });
+
+    // Définir les données pour la prévisualisation
+    setTransformedRows(rows);
+    setSelectedAccountCode(accountCode);
+    setInitialBalance(balance);
+    setBalanceFromFile(null);
+    setIsExcel(false);
+
+    // Passer directement à la prévisualisation
+    setStep('preview');
   };
 
   const handleReset = () => {
@@ -768,9 +814,48 @@ const Upload: React.FC = () => {
 
       {/* Contenu */}
       {step === 'select' && (
-        <Card>
-          <FileDropzone onFilesSelected={handleFilesSelected} />
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <FileDropzone onFilesSelected={handleFilesSelected} />
+          </Card>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {t('common.or', 'ou')}
+            </span>
+            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"></div>
+          </div>
+          <Card>
+            <div className="text-center py-8">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {t('upload.manualCreate.title')}
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                {t('upload.manualCreate.description')}
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => setStep('manual-create')}
+              >
+                {t('upload.createManually')}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {step === 'manual-create' && (
+        <ManualDataCreator
+          accounts={accounts}
+          onConfirm={handleManualCreateConfirm}
+          onCancel={handleReset}
+          onOpenCreateAccount={() => {
+            setCreateAccountContext('manual');
+            setShowCreateAccountModal(true);
+          }}
+          newlyCreatedAccountCode={newlyCreatedAccountCode}
+          onClearNewlyCreated={() => setNewlyCreatedAccountCode(null)}
+        />
       )}
 
       {step === 'sheet-selection' && (
@@ -791,6 +876,10 @@ const Upload: React.FC = () => {
               sheets={excelSheets}
               accounts={accounts}
               onConfirm={handleExcelSheetsConfirm}
+              onOpenCreateAccount={() => {
+                setCreateAccountContext('excel');
+                setShowCreateAccountModal(true);
+              }}
             />
           )}
         </>
@@ -871,18 +960,29 @@ const Upload: React.FC = () => {
               <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
                 {t('upload.accountRequired')}
               </label>
-              <select
-                value={selectedAccountCode}
-                onChange={(e) => setSelectedAccountCode(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">{t('upload.selectAccountPlaceholder')}</option>
-                {Object.entries(accounts).map(([code, account]) => (
-                  <option key={code} value={code}>
-                    {code} - {account.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={selectedAccountCode}
+                  onChange={(e) => setSelectedAccountCode(e.target.value)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">{t('upload.selectAccountPlaceholder')}</option>
+                  {Object.entries(accounts).map(([code, account]) => (
+                    <option key={code} value={code}>
+                      {code} - {account.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setCreateAccountContext('csv');
+                    setShowCreateAccountModal(true);
+                  }}
+                >
+                  {t('upload.createAccount', 'Créer un nouveau compte')}
+                </Button>
+              </div>
             </div>
 
             <div className="flex gap-4 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -1042,8 +1142,30 @@ const Upload: React.FC = () => {
             {t('upload.acceptedFormats')}
             {isExcel && t('upload.excelMultiSheet')}
           </p>
+          <button
+            type="button"
+            onClick={() => setShowImportHelpModal(true)}
+            className="mt-3 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 underline focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
+          >
+            {t('upload.importHelp.link')}
+          </button>
         </div>
       )}
+
+      <CreateAccountModal
+        isOpen={showCreateAccountModal}
+        onClose={() => {
+          setShowCreateAccountModal(false);
+          setCreateAccountContext(null);
+        }}
+        onCreated={handleCreateAccountCreated}
+        existingAccounts={accounts}
+      />
+
+      <ImportHelpModal
+        isOpen={showImportHelpModal}
+        onClose={() => setShowImportHelpModal(false)}
+      />
     </div>
   );
 };

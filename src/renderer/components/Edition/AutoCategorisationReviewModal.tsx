@@ -3,6 +3,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faCheck, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import { PendingAutoCategorisation } from '../../types/AutoCategorisation';
 
+type TabKey = 'high' | 'medium' | 'low';
+
+const TABS: { key: TabKey; label: string; min: number; max: number }[] = [
+  { key: 'high', label: '70–100 %', min: 0.7, max: 1 },
+  { key: 'medium', label: '40–70 %', min: 0.4, max: 0.7 },
+  { key: 'low', label: '≤ 40 %', min: 0, max: 0.4 },
+];
+
 interface AutoCategorisationReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,24 +25,49 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
   onConfirm,
 }) => {
   const [localSuggestions, setLocalSuggestions] = useState<PendingAutoCategorisation[]>(suggestions);
+  const [activeTab, setActiveTab] = useState<TabKey>('high');
 
   // Mettre à jour les suggestions locales quand elles changent
   React.useEffect(() => {
     setLocalSuggestions(suggestions);
   }, [suggestions]);
 
-  const handleToggleSelection = (index: number) => {
+  const tabSuggestions = useMemo(() => {
+    const tab = TABS.find(t => t.key === activeTab);
+    if (!tab) return [];
+    if (tab.key === 'high') {
+      return localSuggestions.filter(s => s.confidence >= 0.7 && s.confidence <= 1);
+    }
+    if (tab.key === 'medium') {
+      return localSuggestions.filter(s => s.confidence >= 0.4 && s.confidence < 0.7);
+    }
+    return localSuggestions.filter(s => s.confidence <= 0.4);
+  }, [localSuggestions, activeTab]);
+
+  const handleToggleSelection = (suggestion: PendingAutoCategorisation) => {
+    const index = localSuggestions.findIndex(s => s.rowIndex === suggestion.rowIndex && s.libelle === suggestion.libelle && s.date === suggestion.date);
+    if (index < 0) return;
     const updated = [...localSuggestions];
-    updated[index] = {
-      ...updated[index],
-      selected: !updated[index].selected,
-    };
+    updated[index] = { ...updated[index], selected: !updated[index].selected };
     setLocalSuggestions(updated);
   };
 
   const handleSelectAll = () => {
     const allSelected = localSuggestions.every(s => s.selected);
     setLocalSuggestions(localSuggestions.map(s => ({ ...s, selected: !allSelected })));
+  };
+
+  const handleSelectAllInTab = () => {
+    const inTab = tabSuggestions;
+    const allInTabSelected = inTab.every(s => s.selected);
+    const rowIndicesInTab = new Set(inTab.map(s => `${s.rowIndex}-${s.libelle}-${s.date}`));
+    setLocalSuggestions(
+      localSuggestions.map(s =>
+        rowIndicesInTab.has(`${s.rowIndex}-${s.libelle}-${s.date}`)
+          ? { ...s, selected: !allInTabSelected }
+          : s
+      )
+    );
   };
 
   const handleConfirm = () => {
@@ -82,6 +115,31 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
           </button>
         </div>
 
+        {/* Onglets par plage de score */}
+        <div className="flex gap-2 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          {TABS.map(tab => {
+            const count =
+              tab.key === 'high'
+                ? localSuggestions.filter(s => s.confidence >= 0.7 && s.confidence <= 1).length
+                : tab.key === 'medium'
+                  ? localSuggestions.filter(s => s.confidence >= 0.4 && s.confidence < 0.7).length
+                  : localSuggestions.filter(s => s.confidence <= 0.4).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                  activeTab === tab.key
+                    ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                {tab.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+
         {/* Résumé */}
         <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
@@ -95,17 +153,32 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
                 </span>
               )}
             </div>
-            <button
-              onClick={handleSelectAll}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              {localSuggestions.every(s => s.selected) ? 'Tout désélectionner' : 'Tout sélectionner'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSelectAllInTab}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {tabSuggestions.every(s => s.selected)
+                  ? 'Tout désélectionner dans l\'onglet'
+                  : 'Tout sélectionner dans l\'onglet'}
+              </button>
+              <button
+                onClick={handleSelectAll}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {localSuggestions.every(s => s.selected) ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Tableau des suggestions */}
         <div className="flex-1 overflow-y-auto p-6">
+          {tabSuggestions.length === 0 ? (
+            <p className="text-center text-gray-500 dark:text-gray-400 py-8">
+              Aucune suggestion dans cette plage de score.
+            </p>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
@@ -113,9 +186,14 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                     <input
                       type="checkbox"
-                      checked={localSuggestions.length > 0 && localSuggestions.every(s => s.selected)}
-                      onChange={handleSelectAll}
+                      checked={
+                        tabSuggestions.length > 0
+                          ? tabSuggestions.every(s => s.selected)
+                          : localSuggestions.length > 0 && localSuggestions.every(s => s.selected)
+                      }
+                      onChange={handleSelectAllInTab}
                       className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      title="Sélectionner / désélectionner tout dans l'onglet"
                     />
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
@@ -139,9 +217,9 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
                 </tr>
               </thead>
               <tbody>
-                {localSuggestions.map((suggestion, index) => (
+                {tabSuggestions.map((suggestion) => (
                   <tr
-                    key={index}
+                    key={`${suggestion.rowIndex}-${suggestion.libelle}-${suggestion.date}`}
                     className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 ${
                       !suggestion.selected ? 'opacity-50' : ''
                     }`}
@@ -150,7 +228,7 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
                       <input
                         type="checkbox"
                         checked={suggestion.selected}
-                        onChange={() => handleToggleSelection(index)}
+                        onChange={() => handleToggleSelection(suggestion)}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                       />
                     </td>
@@ -182,6 +260,7 @@ const AutoCategorisationReviewModal: React.FC<AutoCategorisationReviewModalProps
               </tbody>
             </table>
           </div>
+          )}
         </div>
 
         {/* Footer avec boutons */}
