@@ -27,6 +27,7 @@ import SearchBar from '../../components/Dashboard/SearchBar';
 import PeriodFilterButtons from '../../components/Dashboard/PeriodFilterButtons';
 import { DataService } from '../../services/DataService';
 import { CSVService } from '../../services/CSVService';
+import { ProfilePaths } from '../../services/ProfilePaths';
 import { ConfigService } from '../../services/ConfigService';
 import { AccountSummary } from '../../types/Account';
 import { CategorySummary } from '../../types/Category';
@@ -78,6 +79,57 @@ const Dashboard: React.FC = () => {
   const [isAccountFilterCollapsed, setIsAccountFilterCollapsed] = useState(false);
   const [isCategoryFilterCollapsed, setIsCategoryFilterCollapsed] = useState(false);
   const [isPeriodFilterCollapsed, setIsPeriodFilterCollapsed] = useState(false);
+
+  // États pour les sections principales rétractables (Infos / Graphiques / Tableau)
+  const [isInfoCardsCollapsed, setIsInfoCardsCollapsed] = useState(false);
+  const [isChartsCollapsed, setIsChartsCollapsed] = useState(false);
+  const [isTableCollapsed, setIsTableCollapsed] = useState(false);
+
+  const CollapsibleSection = ({
+    title,
+    icon,
+    isCollapsed,
+    onToggle,
+    contentId,
+    children,
+  }: {
+    title: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon?: any;
+    isCollapsed: boolean;
+    onToggle: () => void;
+    contentId: string;
+    children: React.ReactNode;
+  }) => {
+    return (
+      <section className="dashboard-collapsible-section">
+        <div className="dashboard-collapsible-header">
+          <div className="dashboard-collapsible-title">
+            {icon && <FontAwesomeIcon icon={icon} />}
+            <h2>{title}</h2>
+          </div>
+
+          <button
+            type="button"
+            className="dashboard-collapsible-toggle-button"
+            onClick={onToggle}
+            aria-expanded={!isCollapsed}
+            aria-controls={contentId}
+            title={isCollapsed ? t('dashboard.expand', 'Déplier') : t('dashboard.collapse', 'Replier')}
+          >
+            <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} />
+          </button>
+        </div>
+
+        <div
+          id={contentId}
+          className={`dashboard-collapsible-content ${isCollapsed ? 'collapsed' : ''}`}
+        >
+          {children}
+        </div>
+      </section>
+    );
+  };
 
   // Charger les données initiales
   const loadInitialData = async () => {
@@ -240,7 +292,8 @@ const Dashboard: React.FC = () => {
   const handleExport = async () => {
     try {
       const filename = `export_dashboard_${new Date().toISOString().split('T')[0]}.csv`;
-      await CSVService.exportToCSV(filteredTransactions, `data/${filename}`);
+      const dataDir = await ProfilePaths.getDataDirectory();
+      await CSVService.exportToCSV(filteredTransactions, `${dataDir}/${filename}`);
       alert(`Export réussi: ${filename}`);
     } catch (error) {
       console.error('Erreur lors de l\'export:', error);
@@ -481,52 +534,60 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* 3. Ligne : Solde Total - Total des dépenses - Total des Revenus */}
-        <div className="main-cards">
-          {/* Carte Solde Total */}
-          <div className="stat-card stat-card-balance">
-            <div className="stat-card-body">
-              <h5 className="stat-card-title">
-                <FontAwesomeIcon icon={faWallet} />
-                {t('dashboard.totalBalance')}
-              </h5>
-              <p className="stat-card-value">{formatCurrency(totalBalance)}</p>
+        <CollapsibleSection
+          title={t('dashboard.infoBoxes', 'Infos')}
+          icon={faWallet}
+          isCollapsed={isInfoCardsCollapsed}
+          onToggle={() => setIsInfoCardsCollapsed(!isInfoCardsCollapsed)}
+          contentId="dashboard-info-cards-content"
+        >
+          <div className="main-cards">
+            {/* Carte Solde Total */}
+            <div className="stat-card stat-card-balance">
+              <div className="stat-card-body">
+                <h5 className="stat-card-title">
+                  <FontAwesomeIcon icon={faWallet} />
+                  {t('dashboard.totalBalance')}
+                </h5>
+                <p className="stat-card-value">{formatCurrency(totalBalance)}</p>
+              </div>
+            </div>
+
+            {/* Carte Dépenses */}
+            <div className="stat-card stat-card-expenses">
+              <div className="stat-card-body">
+                <h5 className="stat-card-title">
+                  <FontAwesomeIcon icon={faMoneyBillWave} />
+                  {t('dashboard.totalExpenses')}
+                </h5>
+                <p className="stat-card-value">{formatCurrency(stats?.totalExpenses || 0)}</p>
+              </div>
+            </div>
+
+            {/* Carte Revenus */}
+            <div className="stat-card stat-card-income">
+              <div className="stat-card-body">
+                <h5 className="stat-card-title">
+                  <FontAwesomeIcon icon={faCoins} />
+                  {t('dashboard.totalIncome')}
+                </h5>
+                <p className="stat-card-value">{formatCurrency(stats?.totalIncome || 0)}</p>
+              </div>
             </div>
           </div>
 
-          {/* Carte Dépenses */}
-          <div className="stat-card stat-card-expenses">
-            <div className="stat-card-body">
-              <h5 className="stat-card-title">
-                <FontAwesomeIcon icon={faMoneyBillWave} />
-                {t('dashboard.totalExpenses')}
-              </h5>
-              <p className="stat-card-value">{formatCurrency(stats?.totalExpenses || 0)}</p>
+          {/* 4. Lignes : Moyennes mensuelles par catégorie */}
+          {categoryAverages.length > 0 && (
+            <div className="dashboard-accounts-section">
+              <MiniCategoryCards categories={categoryAverages} />
             </div>
-          </div>
+          )}
 
-          {/* Carte Revenus */}
-          <div className="stat-card stat-card-income">
-            <div className="stat-card-body">
-              <h5 className="stat-card-title">
-                <FontAwesomeIcon icon={faCoins} />
-                {t('dashboard.totalIncome')}
-              </h5>
-              <p className="stat-card-value">{formatCurrency(stats?.totalIncome || 0)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Lignes : Moyennes mensuelles par catégorie */}
-        {categoryAverages.length > 0 && (
+          {/* 5. Lignes : Solde des comptes */}
           <div className="dashboard-accounts-section">
-            <MiniCategoryCards categories={categoryAverages} />
+            <MiniAccountCards accounts={allAccounts} balances={accountBalances} />
           </div>
-        )}
-
-        {/* 5. Lignes : Solde des comptes */}
-        <div className="dashboard-accounts-section">
-          <MiniAccountCards accounts={allAccounts} balances={accountBalances} />
-        </div>
+        </CollapsibleSection>
 
         {/* Indicateur de filtrage */}
         {isFiltering && (
@@ -536,65 +597,81 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* 6. Graphique */}
-        <div className="dashboard-charts-section">
-          {/* Graphique Dépenses par catégorie */}
-          <div className="chart-container">
-            <h2>{t('dashboard.expensesByCategory')}</h2>
-            {categoriesForChart.length > 0 ? (
-              <ChartJsPieChart data={categoriesForChart} title={t('dashboard.expensesByCategory')} />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">{t('common.loading')}</p>
-              </div>
-            )}
-          </div>
+        <CollapsibleSection
+          title={t('dashboard.chartsSection', 'Graphiques')}
+          icon={faCalendarAlt}
+          isCollapsed={isChartsCollapsed}
+          onToggle={() => setIsChartsCollapsed(!isChartsCollapsed)}
+          contentId="dashboard-charts-content"
+        >
+          <div className="dashboard-charts-section">
+            {/* Graphique Dépenses par catégorie */}
+            <div className="chart-container">
+              <h2>{t('dashboard.expensesByCategory')}</h2>
+              {categoriesForChart.length > 0 ? (
+                <ChartJsPieChart data={categoriesForChart} title={t('dashboard.expensesByCategory')} />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">{t('common.loading')}</p>
+                </div>
+              )}
+            </div>
 
-          {/* Graphique Salaire vs Dépenses */}
-          <div className="chart-container">
-            <h2>{t('dashboard.incomeByCategory')}</h2>
-            {stats ? (
-              <IncomePieChart 
-                income={stats.totalIncome} 
-                expenses={stats.totalExpenses}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">{t('common.loading')}</p>
-              </div>
-            )}
-          </div>
+            {/* Graphique Salaire vs Dépenses */}
+            <div className="chart-container">
+              <h2>{t('dashboard.incomeByCategory')}</h2>
+              {stats ? (
+                <IncomePieChart
+                  income={stats.totalIncome}
+                  expenses={stats.totalExpenses}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">{t('common.loading')}</p>
+                </div>
+              )}
+            </div>
 
-          {/* Graphique Évolution des soldes par compte */}
-          <div className="chart-container">
-            <h2>{t('dashboard.accountBalances')}</h2>
-            {accountBalanceChartData && accountBalanceChartData.periods.length > 0 && accountBalanceChartData.balanceData.length > 0 ? (
-              <AccountBalanceLineChart
-                periods={accountBalanceChartData.periods}
-                accounts={accountBalanceChartData.accounts}
-                balanceData={accountBalanceChartData.balanceData}
-                accountColors={accountBalanceChartData.accountColors}
-                granularity={accountBalanceChartData.granularity}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">{t('common.loading')}</p>
-              </div>
-            )}
+            {/* Graphique Évolution des soldes par compte */}
+            <div className="chart-container">
+              <h2>{t('dashboard.accountBalances')}</h2>
+              {accountBalanceChartData && accountBalanceChartData.periods.length > 0 && accountBalanceChartData.balanceData.length > 0 ? (
+                <AccountBalanceLineChart
+                  periods={accountBalanceChartData.periods}
+                  accounts={accountBalanceChartData.accounts}
+                  balanceData={accountBalanceChartData.balanceData}
+                  accountColors={accountBalanceChartData.accountColors}
+                  granularity={accountBalanceChartData.granularity}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">{t('common.loading')}</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* 6. Tableau */}
-        <div className="table-section">
-          <div className="table-header">
-            <span className="transaction-count">
-              {t('dashboard.displayingTransactions', { count: filteredTransactions.length })}
-            </span>
+        <CollapsibleSection
+          title={t('dashboard.tableSection', 'Tableau')}
+          icon={faTags}
+          isCollapsed={isTableCollapsed}
+          onToggle={() => setIsTableCollapsed(!isTableCollapsed)}
+          contentId="dashboard-table-content"
+        >
+          <div className="table-section">
+            <div className="table-header">
+              <span className="transaction-count">
+                {t('dashboard.displayingTransactions', { count: filteredTransactions.length })}
+              </span>
+            </div>
+            <SortableTable
+              key={`transactions-${filteredTransactions.length}-${filteredTransactions[0]?.id || 'empty'}`}
+              transactions={filteredTransactions}
+            />
           </div>
-          <SortableTable 
-            key={`transactions-${filteredTransactions.length}-${filteredTransactions[0]?.id || 'empty'}`}
-            transactions={filteredTransactions} 
-          />
-        </div>
+        </CollapsibleSection>
       </main>
     </div>
   );

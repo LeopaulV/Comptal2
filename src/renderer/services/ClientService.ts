@@ -1,7 +1,6 @@
 import { Client } from '../types/Invoice';
 import { FileService } from './FileService';
-
-const CLIENTS_PATH = 'parametre/clients.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class ClientService {
   private static clientsCache: Client[] | null = null;
@@ -11,7 +10,7 @@ export class ClientService {
       return this.clientsCache;
     }
     try {
-      const content = await FileService.readFile(CLIENTS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('clients.json'));
       const parsed: Client[] = JSON.parse(content);
       const clients = parsed.map((client) => ({
         ...client,
@@ -33,7 +32,7 @@ export class ClientService {
       updatedAt: client.updatedAt.toISOString(),
     }));
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(CLIENTS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('clients.json'), content);
     this.clientsCache = clients;
   }
 

@@ -9,9 +9,7 @@ import {
 } from '../types/Invoice';
 import { FileService } from './FileService';
 import { EmetteurService } from './EmetteurService';
-
-const DEVIS_PATH = 'parametre/devis.json';
-const FACTURES_PATH = 'parametre/factures.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class InvoiceService {
   private static devisCache: Devis[] | null = null;
@@ -22,7 +20,7 @@ export class InvoiceService {
       return this.devisCache;
     }
     try {
-      const content = await FileService.readFile(DEVIS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('devis.json'));
       const parsed: DevisSerialized[] = JSON.parse(content);
       const devis = parsed.map((item) => this.deserializeDevis(item));
       this.devisCache = devis;
@@ -36,7 +34,7 @@ export class InvoiceService {
   static async saveDevis(devisList: Devis[]): Promise<void> {
     const serialized = devisList.map((item) => this.serializeDevis(item));
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(DEVIS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('devis.json'), content);
     this.devisCache = devisList;
   }
 
@@ -45,7 +43,7 @@ export class InvoiceService {
       return this.facturesCache;
     }
     try {
-      const content = await FileService.readFile(FACTURES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('factures.json'));
       const parsed: FactureSerialized[] = JSON.parse(content);
       const factures = parsed.map((item) => this.deserializeFacture(item));
       this.facturesCache = factures;
@@ -75,7 +73,7 @@ export class InvoiceService {
   static async saveFactures(factures: Facture[]): Promise<void> {
     const serialized = factures.map((item) => this.serializeFacture(item));
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(FACTURES_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('factures.json'), content);
     this.facturesCache = factures;
   }
 

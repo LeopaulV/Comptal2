@@ -1,7 +1,6 @@
 import { PDFTemplate, PDFTemplateSerialized } from '../types/Invoice';
 import { FileService } from './FileService';
-
-const TEMPLATES_PATH = 'parametre/pdf_templates.json';
+import { ProfilePaths } from './ProfilePaths';
 
 // Templates par défaut
 const DEFAULT_TEMPLATES: PDFTemplate[] = [
@@ -122,7 +121,7 @@ export class PDFTemplateService {
     }
 
     try {
-      const content = await FileService.readFile(TEMPLATES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('pdf_templates.json'));
       const parsed: PDFTemplateSerialized[] = JSON.parse(content);
       
       const templates: PDFTemplate[] = parsed.map((t) => ({
@@ -152,7 +151,7 @@ export class PDFTemplateService {
     }));
 
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(TEMPLATES_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('pdf_templates.json'), content);
     this.templatesCache = templates;
   }
 

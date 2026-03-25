@@ -31,8 +31,8 @@ body {
 .main-zoom-content > * {
   flex: 1;
   min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
+  /* On laisse le contenu dépasser : le scroll est porté par `.main-zoom-content` */
+  overflow: visible;
 }
 
 /* Scrollbar personnalisé */

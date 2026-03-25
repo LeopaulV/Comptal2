@@ -308,7 +308,14 @@
     "dataFilesEmpty": "Keine Dateien in diesem Ordner",
     "dataFileDelete": "Diese CSV-Datei löschen",
     "dataFileDeleteConfirm": "Möchten Sie die Datei {{file}} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "dataFileDeleteError": "Fehler beim Löschen: {{error}}"
+    "dataFileDeleteError": "Fehler beim Löschen: {{error}}",
+    "guidedTourSection": "Tutorial",
+    "guidedTourOnStartup": "Tutorial beim Start anbieten",
+    "guidedTourOnStartupDescription": "Wenn aktiviert, erscheint das interaktive Tutorial, bis Sie es abgeschlossen oder übersprungen haben. Deaktivieren Sie die Option, damit es beim Start nicht mehr erscheint (Sie können es jederzeit mit der Schaltfläche unten starten).",
+    "guidedTourStartNow": "Tutorial jetzt starten",
+    "guidedTourSaveSuccess": "Einstellung für dieses Profil gespeichert.",
+    "guidedTourSaveError": "Speichern fehlgeschlagen: {{error}}",
+    "guidedTourLaunchHint": "Das Tutorial startet…"
   },
   "profiles": {
     "title": "Profilverwaltung",
@@ -451,14 +458,24 @@
         "description": "Klicken Sie auf „Konto hinzufügen“, um ein Bankkonto anzulegen",
         "tooltip": "Hier klicken!"
       },
-      "importData": {
-        "title": "Daten importieren",
-        "description": "CSV- oder Excel-Dateien hier ablegen",
-        "tooltip": "Bankdateien hier ablegen"
+      "importMappingInfo": {
+        "title": "Spalten beim Import zuordnen",
+        "description": "Nach der Dateiauswahl öffnet sich ein Fenster: Ordnen Sie jede Spalte Ihres Auszugs dem erwarteten Feld in Comptal2 zu.\n\nPflichtspalten:\n• Datum — Buchungsdatum (häufig „Buchungsdatum“ oder „Valutadatum“ je nach Bank)\n• Verwendungszweck — Beschreibung der Buchung\n• Beträge — entweder zwei Spalten Soll und Haben oder eine kombinierte Spalte „Soll/Haben“ (+ und −)\n\nDas Valutadatum ist optional: nur zuordnen, wenn Ihre Bank es in einer eigenen Spalte liefert; sonst reicht das Hauptdatum.\n\nIst die automatische Erkennung falsch, passen Sie die Dropdowns an, bis die Vorschau stimmt.\n\nBestätigen und den Import abschließen: Sobald eine CSV in diesem Profil gespeichert ist, geht das Tutorial automatisch weiter.",
+        "tooltip": "Spaltenzuordnung"
+      },
+      "importFile": {
+        "title": "Kontoauszug importieren",
+        "description": "Ziehen Sie zuerst Ihre CSV- oder Excel-Datei hierher und wählen Sie das Konto.\n\nIm nächsten Schritt erklärt das Tutorial die Spaltenzuordnung (Datum, Text, Soll/Haben, Valutadatum), wenn das Fenster auf dem Bildschirm erscheint.\n\nTippen Sie auf Weiter, wenn Sie die Datei auswählen möchten.",
+        "tooltip": "Importbereich"
+      },
+      "categoryTransferX": {
+        "title": "Kategorie X: Umbuchungen zwischen eigenen Konten",
+        "description": "Der Code X steht für Umbuchungen zwischen eigenen Konten: Buchungen, die nur Geld von einem Ihrer Konten auf ein anderes verschieben — ohne echte Ausgabe oder Einnahme.\n\nBeispiel: Überweisung vom Sparbuch auf das Girokonto.\n\nSolche Bewegungen sollten nicht als Ausgaben oder Einnahmen gewertet werden: Ordnen Sie sie X zu, damit sie in Auswertungen korrekt ausgeschlossen werden.",
+        "tooltip": "Interkontoumbuchungen"
       },
       "createCategory": {
         "title": "Kategorien erstellen",
-        "description": "Organisieren Sie Ihre Buchungen mit eigenen Kategorien",
+        "description": "Ergänzen Sie X und die Standardkategorien um eigene Kategorien für Ihre Buchungen.",
         "tooltip": "Kategorien hier verwalten"
       }
     },

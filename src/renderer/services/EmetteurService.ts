@@ -7,9 +7,8 @@ import {
   InvoiceSettingsSerialized 
 } from '../types/Invoice';
 import { FileService } from './FileService';
+import { ProfilePaths } from './ProfilePaths';
 
-const EMETTEUR_PATH = 'parametre/emetteur.json';
-const SETTINGS_PATH = 'parametre/invoice_settings.json';
 const DEFAULT_ADRESSE = { rue: '', codePostal: '', ville: '', pays: 'France' };
 
 const generateEmetteurId = () => `emit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -18,8 +17,6 @@ export class EmetteurService {
   private static emetteurCache: Emetteur | null = null;
   private static settingsCache: InvoiceSettings | null = null;
   private static extendedEmetteurCache: EmetteurExtended | null = null;
-  private static readonly EXTENDED_EMETTEUR_PATH = 'parametre/emetteur_extended.json';
-
   private static parseDateOrNow(value: unknown): Date {
     if (!value) return new Date();
     const parsed = new Date(value as string);
@@ -83,7 +80,7 @@ export class EmetteurService {
     }
 
     try {
-      const content = await FileService.readFile(EMETTEUR_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('emetteur.json'));
       const parsed = JSON.parse(content) as Partial<EmetteurSerialized>;
       const emetteur = this.normalizeBaseEmetteur(parsed);
       this.emetteurCache = emetteur;
@@ -105,7 +102,7 @@ export class EmetteurService {
       updatedAt: new Date().toISOString(),
     };
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(EMETTEUR_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('emetteur.json'), content);
     this.emetteurCache = {
       ...emetteur,
       updatedAt: new Date(serialized.updatedAt),
@@ -201,7 +198,7 @@ export class EmetteurService {
       return this.settingsCache;
     }
     try {
-      const content = await FileService.readFile(SETTINGS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('invoice_settings.json'));
       const parsed: InvoiceSettingsSerialized = JSON.parse(content);
       const settings: InvoiceSettings = {
         ...parsed,
@@ -234,7 +231,7 @@ export class EmetteurService {
       },
     };
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(SETTINGS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('invoice_settings.json'), content);
     this.settingsCache = settings;
   }
 
@@ -275,7 +272,7 @@ export class EmetteurService {
     }
 
     try {
-      const content = await FileService.readFile(this.EXTENDED_EMETTEUR_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('emetteur_extended.json'));
       const parsed = JSON.parse(content) as Partial<EmetteurExtendedSerialized>;
       const emetteur = this.normalizeExtendedEmetteur(parsed);
       this.extendedEmetteurCache = emetteur;
@@ -315,7 +312,7 @@ export class EmetteurService {
     };
 
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(this.EXTENDED_EMETTEUR_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('emetteur_extended.json'), content);
 
     // Mettre à jour le cache
     this.extendedEmetteurCache = {

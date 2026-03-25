@@ -5,6 +5,7 @@ import { AccountSummary } from '../types/Account';
 import { CategorySummary } from '../types/Category';
 import { CSVService } from './CSVService';
 import { ConfigService } from './ConfigService';
+import { ProfilePaths } from './ProfilePaths';
 import { startOfMonth, startOfDay, startOfWeek, format, parse, differenceInDays, differenceInMonths, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, getWeek, getYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -140,10 +141,7 @@ export class DataService {
     if (this.isLoaded) return;
 
     try {
-      // Charger le chemin du dossier de données depuis les settings
-      const settings = await ConfigService.loadSettings();
-      const dataDirectory = settings.dataDirectory || 'data';
-      
+      const dataDirectory = await ProfilePaths.getDataDirectory();
       this.transactions = await CSVService.loadAllTransactions(dataDirectory);
       // Accepter un tableau vide comme résultat valide (pas d'erreur)
       if (this.transactions.length === 0) {
@@ -405,9 +403,9 @@ export class DataService {
       t.category !== 'X'
     );
 
-    // Calculer le total pour les pourcentages
-    const totalAmount = validTransactions
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    // Total des montants absolus (dénominateur des parts % — inchangé sémantiquement)
+    const totalAbsAmount = validTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const categoryAbsAmount = new Map<string, number>();
 
     for (const t of validTransactions) {
       if (!categoryMap.has(t.category!)) {
@@ -423,15 +421,16 @@ export class DataService {
       }
 
       const summary = categoryMap.get(t.category!)!;
-      summary.totalAmount += Math.abs(t.amount);
+      summary.totalAmount += t.amount;
       summary.transactionCount++;
+      const code = t.category!;
+      categoryAbsAmount.set(code, (categoryAbsAmount.get(code) || 0) + Math.abs(t.amount));
     }
 
-    // Calculer les pourcentages
+    // Parts % : volume absolu par catégorie / volume total (la colonne « somme » reste algébrique)
     for (const summary of categoryMap.values()) {
-      summary.percentage = totalAmount > 0 
-        ? (summary.totalAmount / totalAmount) * 100
-        : 0;
+      const absSum = categoryAbsAmount.get(summary.categoryCode) || 0;
+      summary.percentage = totalAbsAmount > 0 ? (absSum / totalAbsAmount) * 100 : 0;
     }
 
     return Array.from(categoryMap.values())
@@ -797,7 +796,7 @@ export class DataService {
       } else if (t.amount < 0) {
         if (!debitsMap.has(cat)) debitsMap.set(cat, new Map());
         const m = debitsMap.get(cat)!;
-        m.set(periodKey, (m.get(periodKey) || 0) + Math.abs(t.amount));
+        m.set(periodKey, (m.get(periodKey) || 0) + t.amount);
       }
     });
 
@@ -811,7 +810,7 @@ export class DataService {
 
     const categoriesWithDebits = categoryList.filter(cat => {
       const m = debitsMap.get(cat);
-      return m && Array.from(m.values()).some(v => v > 0);
+      return m && Array.from(m.values()).some(v => v < 0);
     }).map(cat => categoriesConfig[cat]?.name || cat);
 
     const creditsByCategory: Record<string, number[]> = {};

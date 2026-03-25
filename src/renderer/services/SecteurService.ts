@@ -1,6 +1,5 @@
 import { FileService } from './FileService';
-
-const SECTEURS_PATH = 'parametre/secteurs_activite.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export interface SecteurActivite {
   id: string;
@@ -16,7 +15,7 @@ export class SecteurService {
       return this.cache;
     }
     try {
-      const content = await FileService.readFileOptional(SECTEURS_PATH);
+      const content = await FileService.readFileOptional(await ProfilePaths.parametreFile('secteurs_activite.json'));
       if (content === null) {
         this.cache = [];
         return [];
@@ -31,7 +30,7 @@ export class SecteurService {
 
   static async saveSecteurs(secteurs: SecteurActivite[]): Promise<void> {
     const content = JSON.stringify(secteurs, null, 2);
-    await FileService.writeFile(SECTEURS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('secteurs_activite.json'), content);
     this.cache = secteurs;
   }
 

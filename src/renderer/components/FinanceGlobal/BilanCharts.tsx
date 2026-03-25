@@ -80,7 +80,8 @@ const BilanCharts = forwardRef<BilanChartsRef, BilanChartsProps>(function BilanC
       (s, cat) => s + (data.debitsByCategory[cat] || []).reduce((a, b) => a + b, 0),
       0
     );
-    const grandTotal = totalCreditsSum + totalDebitsSum;
+    // Débits agrégés sont négatifs : volume total pour le camembert = crédits + |débits|
+    const grandTotal = totalCreditsSum + Math.abs(totalDebitsSum);
     const needsSeparator = data.categoriesWithCredits.length > 0 && data.categoriesWithDebits.length > 0 && grandTotal > 0;
     const separatorSize = needsSeparator ? Math.max(grandTotal * 0.02, 1) : 0;
     const separatorColor = effectiveDarkMode ? '#1e293b' : '#f8fafc';
@@ -94,9 +95,9 @@ const BilanCharts = forwardRef<BilanChartsRef, BilanChartsProps>(function BilanC
 
     data.categoriesWithDebits.forEach((cat) => {
       const totalDebits = (data.debitsByCategory[cat] || []).reduce((a, b) => a + b, 0);
-      if (totalDebits > 0) {
+      if (totalDebits < 0) {
         labels.push(cat);
-        values.push(totalDebits);
+        values.push(Math.abs(totalDebits));
         colors.push(data.categoryColors[cat] || '#ef4444');
         segmentTypes.push('debit');
       }
@@ -159,7 +160,8 @@ const BilanCharts = forwardRef<BilanChartsRef, BilanChartsProps>(function BilanC
               const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
               const prefix = type === 'credit' ? t('financeGlobal.credit') : t('financeGlobal.debit');
               const catName = repartitionData.labels[ctx.dataIndex];
-              return `${prefix} — ${catName}: ${formatCurrency(value)} (${pct} %)`;
+              const displayAmount = type === 'debit' ? formatCurrency(-value) : formatCurrency(value);
+              return `${prefix} — ${catName}: ${displayAmount} (${pct} %)`;
             },
           },
         },
@@ -369,7 +371,7 @@ const BilanCharts = forwardRef<BilanChartsRef, BilanChartsProps>(function BilanC
 
   const hasRepartition = repartitionData.values.some((v) => v > 0);
   const hasCredits = creditsBarData.values.some((v) => v > 0);
-  const hasDebits = debitsBarData.values.some((v) => v > 0);
+  const hasDebits = debitsBarData.values.some((v) => v !== 0);
 
   return (
     <div className="bilan-charts-grid">

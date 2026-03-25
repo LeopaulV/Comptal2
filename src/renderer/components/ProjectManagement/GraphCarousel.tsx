@@ -1,10 +1,9 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import { ProjectionData, ProjectionDataByAccount, Subscription, ProjectionConfig } from '../../types/ProjectManagement';
 import { CategoriesConfig } from '../../types/Category';
 import { formatCurrency } from '../../utils/format';
+import { useZoom } from '../../hooks/useZoom';
 import BalanceStackedProjectionChart from './BalanceStackedProjectionChart';
 import DebitCreditComparisonChart from './DebitCreditComparisonChart';
 import CategoryBreakdownChart from './CategoryBreakdownChart';
@@ -52,19 +51,22 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
   accountNames = {},
 }) => {
   const { t } = useTranslation();
+  const { zoomLevel } = useZoom();
   const [currentPage, setCurrentPage] = useState(0);
-  const [isHovering, setIsHovering] = useState(false);
   const [drillDown, setDrillDown] = useState<DrillDownData | null>(null);
 
-  const totalPages = 2;
+  const pages = [
+    { index: 0, label: t('projectManagement.carousel.page1', 'Dashboard') },
+    { index: 1, label: t('projectManagement.carousel.page2', 'Répartition') },
+  ];
 
   const handlePrevious = useCallback(() => {
-    setCurrentPage((prev) => (prev > 0 ? prev - 1 : totalPages - 1));
-  }, [totalPages]);
+    setCurrentPage((prev) => (prev > 0 ? prev - 1 : pages.length - 1));
+  }, [pages.length]);
 
   const handleNext = useCallback(() => {
-    setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : 0));
-  }, [totalPages]);
+    setCurrentPage((prev) => (prev < pages.length - 1 ? prev + 1 : 0));
+  }, [pages.length]);
 
   // Navigation au clavier
   useEffect(() => {
@@ -87,6 +89,20 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
     }
   }, [currentPage]);
 
+  // Les graphiques Chart.js de cette page réagissent mal au zoom CSS.
+  // On force un recalcul après changement de zoom pour réaligner les canvases.
+  useEffect(() => {
+    const fireResize = () => window.dispatchEvent(new Event('resize'));
+    fireResize();
+    const frameId = window.requestAnimationFrame(fireResize);
+    const timeoutId = window.setTimeout(fireResize, 180);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [zoomLevel]);
+
   const handleOpenDrillDown = useCallback((data: DrillDownData) => {
     setDrillDown(data);
   }, []);
@@ -98,32 +114,16 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
   return (
     <div
       className="graph-carousel-container"
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
-      {/* Flèches de navigation */}
-      {isHovering && (
-        <>
-          <button
-            className="carousel-arrow carousel-arrow-left"
-            onClick={handlePrevious}
-            aria-label={t('projectManagement.carousel.previous', 'Page précédente')}
-          >
-            <FontAwesomeIcon icon={faChevronLeft} />
-          </button>
-          <button
-            className="carousel-arrow carousel-arrow-right"
-            onClick={handleNext}
-            aria-label={t('projectManagement.carousel.next', 'Page suivante')}
-          >
-            <FontAwesomeIcon icon={faChevronRight} />
-          </button>
-        </>
-      )}
-
       {/* Viewport : contraint la zone visible et permet l'adaptation au conteneur */}
       <div className="graph-carousel-viewport">
-        <div className="graph-carousel-track" style={{ transform: `translateX(-${currentPage * 50}%)` }}>
+        <div
+          className="graph-carousel-track"
+          style={{ 
+            // Même formule exacte que StatsCarousel pour la cohérence zoom/dézoom
+            transform: `translateX(-${currentPage * (100 / pages.length)}%)` 
+          }}
+        >
         {/* Page 1 : Boxes info + 2 premiers graphiques */}
         <div className="graph-carousel-page">
           <div className="graph-page-content">
@@ -172,6 +172,7 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
                 <div className="graph-card-content">
                   {projectionDataByAccount && projectionDataByAccount.length > 0 && projectionConfig.accountConfigs && projectionConfig.accountConfigs.length > 0 ? (
                     <BalanceStackedProjectionChart
+                      key={`balance-stacked-${zoomLevel}`}
                       data={projectionDataByAccount}
                       accountConfigs={projectionConfig.accountConfigs}
                       accountColors={accountColors}
@@ -190,7 +191,10 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
                   {t('projectManagement.charts.debitCreditComparison', 'Débits vs Crédits')}
                 </h3>
                 <div className="graph-card-content">
-                  <DebitCreditComparisonChart data={projectionData} />
+                  <DebitCreditComparisonChart
+                    key={`debit-credit-${zoomLevel}`}
+                    data={projectionData}
+                  />
                 </div>
               </div>
             </div>
@@ -207,6 +211,7 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
                 </h3>
                 <div className="graph-card-content">
                   <CategoryBreakdownChart 
+                    key={`category-breakdown-${zoomLevel}`}
                     subscriptions={subscriptions}
                     projectionConfig={projectionConfig}
                     categories={categories}
@@ -221,6 +226,7 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
                 </h3>
                 <div className="graph-card-content">
                   <CategoryDistributionChart 
+                    key={`category-distribution-${zoomLevel}`}
                     subscriptions={subscriptions}
                     projectionConfig={projectionConfig}
                     categories={categories}
@@ -233,15 +239,21 @@ const GraphCarousel: React.FC<GraphCarouselProps> = ({
         </div>
       </div>
 
-      {/* Indicateurs de page */}
-      <div className="carousel-indicators">
-        {Array.from({ length: totalPages }).map((_, index) => (
+      {/* Controles "par page" (modèle Entreprise/Association) */}
+      <div className="graph-carousel-controls">
+        {pages.map(({ index, label }) => (
           <button
             key={index}
-            className={`carousel-indicator ${currentPage === index ? 'active' : ''}`}
+            type="button"
             onClick={() => setCurrentPage(index)}
-            aria-label={t('projectManagement.carousel.goToPage', { page: index + 1, defaultValue: `Aller à la page ${index + 1}` })}
-          />
+            className={`graph-carousel-tab ${currentPage === index ? 'active' : ''}`}
+            aria-label={t('projectManagement.carousel.goToPage', {
+              page: index + 1,
+              defaultValue: `Go to page ${index + 1}`,
+            })}
+          >
+            {label}
+          </button>
         ))}
       </div>
 

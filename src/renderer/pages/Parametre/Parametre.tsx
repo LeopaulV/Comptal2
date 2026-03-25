@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Palette, Folder, Database, Info, Trash2, FileSpreadsheet, UserCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import { Card } from '../../components/Common';
 import AccountManager from '../../components/Parametre/AccountManager';
 import CategoryManager from '../../components/Parametre/CategoryManager';
@@ -11,6 +12,8 @@ import { DataService } from '../../services/DataService';
 import { FileService } from '../../services/FileService';
 import { useLanguage } from '../../hooks/useLanguage';
 import { OnboardingService } from '../../services/OnboardingService';
+import { ProfilePaths } from '../../services/ProfilePaths';
+import { GUIDED_TOUR_START_EVENT } from '../../config/tourSteps';
 import { MenuVisibility, DEFAULT_MENU_VISIBILITY } from '../../types/Settings';
 
 const APP_VERSION = '1.1.0';
@@ -28,6 +31,7 @@ const Parametre: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [menuVisibility, setMenuVisibility] = useState<MenuVisibility>(DEFAULT_MENU_VISIBILITY);
+  const [guidedTourOnStartup, setGuidedTourOnStartup] = useState(true);
   const [dataFiles, setDataFiles] = useState<string[]>([]);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
 
@@ -36,9 +40,7 @@ const Parametre: React.FC = () => {
     const loadSettings = async () => {
       try {
         const settings = await ConfigService.loadSettings();
-        if (settings.dataDirectory) {
-          setDataFolderPath(settings.dataDirectory);
-        }
+        setDataFolderPath(await ProfilePaths.getDataDirectory());
         if (settings.menuVisibility) {
           setMenuVisibility(settings.menuVisibility);
         }
@@ -48,6 +50,19 @@ const Parametre: React.FC = () => {
     };
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'general') return;
+    const syncGuidedTourPref = async () => {
+      try {
+        const settings = await ConfigService.loadSettings();
+        setGuidedTourOnStartup(settings.onboardingCompleted !== true);
+      } catch {
+        /* ignore */
+      }
+    };
+    syncGuidedTourPref();
+  }, [activeTab]);
 
   // Ouvrir automatiquement l'onglet "accounts" si aucun compte n'existe (pour le didacticiel)
   useEffect(() => {
@@ -75,6 +90,23 @@ const Parametre: React.FC = () => {
     loadDataFiles();
   }, [activeTab, dataFolderPath]);
 
+  const handleGuidedTourOnStartupChange = async (checked: boolean) => {
+    try {
+      const settings = await ConfigService.loadSettings();
+      settings.onboardingCompleted = !checked;
+      await ConfigService.saveSettings(settings);
+      setGuidedTourOnStartup(checked);
+      toast.success(t('settings.guidedTourSaveSuccess'));
+    } catch (error: any) {
+      toast.error(t('settings.guidedTourSaveError', { error: error.message }));
+    }
+  };
+
+  const handleStartGuidedTourNow = () => {
+    window.dispatchEvent(new Event(GUIDED_TOUR_START_EVENT));
+    toast.info(t('settings.guidedTourLaunchHint'));
+  };
+
   // Handler pour mettre à jour la visibilité du menu
   const handleMenuVisibilityChange = async (key: keyof MenuVisibility, value: boolean) => {
     try {
@@ -90,33 +122,6 @@ const Parametre: React.FC = () => {
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde de la visibilité du menu:', error);
       alert(t('settings.menuVisibilityError', { error: error.message }));
-    }
-  };
-
-  // Handler pour sélectionner un dossier de données
-  const handleBrowseDataFolder = async () => {
-    try {
-      const result = await window.electronAPI.selectFolder();
-      if (result.success && result.path) {
-        // Mettre à jour les settings avec le nouveau chemin
-        const settings = await ConfigService.loadSettings();
-        settings.dataDirectory = result.path;
-        await ConfigService.saveSettings(settings);
-        setDataFolderPath(result.path);
-        
-        // Vider le cache et recharger les données
-        ConfigService.clearCache();
-        await DataService.reload();
-        
-        alert(t('settings.dataFolderUpdated', { path: result.path }));
-        
-        // Recharger la page pour que tous les composants se mettent à jour
-        window.location.reload();
-      } else if (!result.canceled) {
-        alert(t('settings.dataFolderError', { error: result.error || 'Erreur inconnue' }));
-      }
-    } catch (error: any) {
-      alert(t('settings.dataFolderError', { error: error.message }));
     }
   };
 
@@ -205,10 +210,9 @@ const Parametre: React.FC = () => {
           await ConfigService.saveCategories(config.categories);
         }
         if (config.settings) {
-          await ConfigService.saveSettings(config.settings);
-          if (config.settings.dataDirectory) {
-            setDataFolderPath(config.settings.dataDirectory);
-          }
+          const dataDir = await ProfilePaths.getDataDirectory();
+          await ConfigService.saveSettings({ ...config.settings, dataDirectory: dataDir });
+          setDataFolderPath(dataDir);
         }
         if (config.autoCategorisation) {
           await ConfigService.saveAutoCategorisationStats(config.autoCategorisation);
@@ -361,6 +365,36 @@ const Parametre: React.FC = () => {
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+                {t('settings.guidedTourSection')}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                {t('settings.guidedTourOnStartupDescription')}
+              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="guided-tour-startup"
+                    checked={guidedTourOnStartup}
+                    onChange={(e) => handleGuidedTourOnStartupChange(e.target.checked)}
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  />
+                  <label htmlFor="guided-tour-startup" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('settings.guidedTourOnStartup')}
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStartGuidedTourNow}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors whitespace-nowrap"
+                >
+                  {t('settings.guidedTourStartNow')}
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
               <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
                 {t('settings.menuVisibility')}
               </h4>
@@ -486,7 +520,7 @@ const Parametre: React.FC = () => {
                 {t('settings.dataFolder')}
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {t('settings.dataFolderDescription')}
+                {t('settings.dataFolderDescription')} (dossier du profil actif, chemin relatif à l’application)
               </p>
               <div className="flex gap-2">
                 <input
@@ -496,12 +530,6 @@ const Parametre: React.FC = () => {
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                            bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
                 />
-                <button 
-                  onClick={handleBrowseDataFolder}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300
-                                 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                  {t('settings.browse')}
-                </button>
               </div>
             </div>
 

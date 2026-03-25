@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OnboardingService } from '../services/OnboardingService';
-import { tourSteps, TourStep } from '../config/tourSteps';
+import { tourSteps, TourStep, GUIDED_TOUR_START_EVENT } from '../config/tourSteps';
 
 export interface TourState {
   isActive: boolean;
@@ -97,6 +97,14 @@ export const useOnboarding = (): UseOnboardingReturn => {
       navigate(tourSteps[0].targetRoute);
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const onStartRequest = () => {
+      startTour();
+    };
+    window.addEventListener(GUIDED_TOUR_START_EVENT, onStartRequest);
+    return () => window.removeEventListener(GUIDED_TOUR_START_EVENT, onStartRequest);
+  }, [startTour]);
 
   // Étape suivante
   const nextStep = useCallback(async () => {

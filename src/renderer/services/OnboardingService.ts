@@ -2,29 +2,23 @@
 
 import { ConfigService } from './ConfigService';
 import { FileService } from './FileService';
+import { ProfilePaths } from './ProfilePaths';
 
 export class OnboardingService {
   // Catégories par défaut qui ne comptent pas comme des catégories personnalisées
   private static readonly DEFAULT_CATEGORIES = ['!', '?', 'X'];
 
   /**
-   * Vérifie si c'est la première ouverture de l'application
+   * Indique si le didacticiel doit s'afficher pour le profil actif :
+   * tant que `onboardingCompleted` n'est pas `true` dans les paramètres du profil.
    */
   static async isFirstLaunch(): Promise<boolean> {
     try {
-      // Vérifier si le didacticiel a déjà été complété
       const settings = await ConfigService.loadSettings();
       if (settings.onboardingCompleted === true) {
         return false;
       }
-
-      // Vérifier les conditions de première ouverture
-      const hasAccounts = await this.hasUserAccounts();
-      const hasData = await this.hasImportedData();
-      const hasCustomCategories = await this.hasCustomCategories();
-
-      // Si aucune des conditions n'est remplie, c'est une première ouverture
-      return !hasAccounts && !hasData && !hasCustomCategories;
+      return true;
     } catch (error: any) {
       console.error('[OnboardingService] Erreur lors de la vérification de première ouverture:', error);
       // En cas d'erreur, on considère que ce n'est pas une première ouverture pour éviter de bloquer l'utilisateur
@@ -52,8 +46,7 @@ export class OnboardingService {
    */
   static async hasImportedData(): Promise<boolean> {
     try {
-      const settings = await ConfigService.loadSettings();
-      const dataDir = settings.dataDirectory || 'data';
+      const dataDir = await ProfilePaths.getDataDirectory();
       const files = await FileService.readDirectoryOptional(dataDir);
       if (files === null) return false;
       return files.some(file => file.endsWith('.csv'));

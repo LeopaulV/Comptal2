@@ -150,14 +150,13 @@ const copyDirectory = async (src: string, dest: string, forceOverwrite: boolean 
   }
 };
 
-// Initialiser les fichiers utilisateur depuis les fichiers par défaut
+// Gabarits par défaut (Linux packagé) : parametre/ à la racine userData sert de source pour la migration
+// vers profiles/{id}/ au premier lancement côté renderer. Le stockage vivant est profiles/... uniquement.
 const initializeUserData = async (userDataPath: string): Promise<void> => {
   try {
     const defaultDataPath = getDefaultDataPath();
     const parametreSrc = path.join(defaultDataPath, 'parametre');
-    const dataSrc = path.join(defaultDataPath, 'data');
     const parametreDest = path.join(userDataPath, 'parametre');
-    const dataDest = path.join(userDataPath, 'data');
     
     // Créer le répertoire utilisateur s'il n'existe pas
     if (!existsSync(userDataPath)) {
@@ -165,28 +164,16 @@ const initializeUserData = async (userDataPath: string): Promise<void> => {
       console.log('[initializeUserData] Répertoire utilisateur créé:', userDataPath);
     }
     
-    // Vérifier si les dossiers de destination existent déjà
     const hasParametre = existsSync(parametreDest);
-    const hasData = existsSync(dataDest);
     
-    // Copier les fichiers de configuration (parametre/) s'ils n'existent pas
-    // On copie toujours les fichiers individuels s'ils manquent, même si le dossier existe
     if (existsSync(parametreSrc)) {
       if (!hasParametre) {
-        console.log('[initializeUserData] Copie complète de parametre/ vers le répertoire utilisateur');
+        console.log('[initializeUserData] Copie complète de parametre/ (gabarits) vers le répertoire utilisateur');
         await copyDirectory(parametreSrc, parametreDest);
       } else {
-        // Le dossier existe, mais copier les fichiers individuels manquants
         console.log('[initializeUserData] Vérification des fichiers manquants dans parametre/');
         await copyDirectory(parametreSrc, parametreDest, false);
       }
-    }
-    
-    // Pour data/, on copie seulement si le dossier n'existe pas
-    // (pour éviter d'écraser les données utilisateur existantes)
-    if (!hasData && existsSync(dataSrc)) {
-      console.log('[initializeUserData] Copie de data/ vers le répertoire utilisateur');
-      await copyDirectory(dataSrc, dataDest);
     }
     
     console.log('[initializeUserData] Initialisation terminée');

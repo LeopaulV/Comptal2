@@ -1,8 +1,6 @@
 import { PosteFacture, PosteGroupe } from '../types/Invoice';
 import { FileService } from './FileService';
-
-const POSTES_PATH = 'parametre/postes_catalogue.json';
-const POSTES_GROUPES_PATH = 'parametre/postes_groupes.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class PosteService {
   private static cache: PosteFacture[] | null = null;
@@ -13,7 +11,7 @@ export class PosteService {
       return this.cache;
     }
     try {
-      const content = await FileService.readFile(POSTES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('postes_catalogue.json'));
       this.cache = JSON.parse(content);
       return this.cache!;
     } catch (error: any) {
@@ -24,7 +22,7 @@ export class PosteService {
 
   static async savePostes(postes: PosteFacture[]): Promise<void> {
     const content = JSON.stringify(postes, null, 2);
-    await FileService.writeFile(POSTES_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('postes_catalogue.json'), content);
     this.cache = postes;
   }
 
@@ -54,7 +52,7 @@ export class PosteService {
       return this.groupesCache;
     }
     try {
-      const content = await FileService.readFile(POSTES_GROUPES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('postes_groupes.json'));
       const parsed: Array<Omit<PosteGroupe, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string }> =
         JSON.parse(content);
       this.groupesCache = parsed.map((groupe) => ({
@@ -76,7 +74,7 @@ export class PosteService {
       updatedAt: groupe.updatedAt.toISOString(),
     }));
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(POSTES_GROUPES_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('postes_groupes.json'), content);
     this.groupesCache = groupes;
   }
 

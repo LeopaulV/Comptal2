@@ -297,7 +297,14 @@
     "dataFilesEmpty": "No files in this folder",
     "dataFileDelete": "Delete this CSV file",
     "dataFileDeleteConfirm": "Are you sure you want to delete {{file}}? This action is irreversible.",
-    "dataFileDeleteError": "Error during deletion: {{error}}"
+    "dataFileDeleteError": "Error during deletion: {{error}}",
+    "guidedTourSection": "Guided tour",
+    "guidedTourOnStartup": "Offer the guided tour on startup",
+    "guidedTourOnStartupDescription": "When enabled, the interactive tutorial appears until you finish or skip it. Turn it off to stop it from showing at launch (you can still restart it with the button below).",
+    "guidedTourStartNow": "Start guided tour now",
+    "guidedTourSaveSuccess": "Preference saved for this profile.",
+    "guidedTourSaveError": "Could not save: {{error}}",
+    "guidedTourLaunchHint": "Starting the guided tour…"
   },
   "profiles": {
     "title": "Profile management",
@@ -583,6 +590,8 @@
       "configureAccounts": "Configure projection accounts to see the chart"
     },
     "carousel": {
+      "page1": "Dashboard",
+      "page2": "Distribution",
       "previous": "Previous page",
       "next": "Next page",
       "goToPage": "Go to page {{page}}"

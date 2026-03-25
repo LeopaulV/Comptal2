@@ -1,12 +1,11 @@
 import { RecetteRegistreEntry } from '../types/Invoice';
 import { FileService } from './FileService';
-
-const REGISTRE_PATH = 'parametre/registre_recettes_entreprise.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class RegistreRecettesEntrepriseService {
   static async loadRegistre(): Promise<RecetteRegistreEntry[]> {
     try {
-      const content = await FileService.readFile(REGISTRE_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('registre_recettes_entreprise.json'));
       return JSON.parse(content) as RecetteRegistreEntry[];
     } catch {
       return [];
@@ -14,7 +13,7 @@ export class RegistreRecettesEntrepriseService {
   }
 
   static async saveRegistre(entries: RecetteRegistreEntry[]): Promise<void> {
-    await FileService.writeFile(REGISTRE_PATH, JSON.stringify(entries, null, 2));
+    await FileService.writeFile(await ProfilePaths.parametreFile('registre_recettes_entreprise.json'), JSON.stringify(entries, null, 2));
   }
 
   /** Ajoute une nouvelle entrée dans le registre des recettes */

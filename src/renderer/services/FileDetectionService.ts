@@ -185,10 +185,17 @@ export class FileDetectionService {
     for (const value of nonEmptyValues.slice(0, sampleSize)) {
       const parsed = parseDateWithMultipleFormats(value);
       if (parsed !== null) {
+        // Ne considérer "montant" que pour les valeurs réellement numériques.
+        // Exemple: "2025-11-17" ne doit pas devenir 2025 via parseFloat.
+        const raw = String(value).trim();
+        const normalized = raw.replace(/\s/g, '').replace(',', '.');
+        const isStrictNumeric = /^-?\d+(\.\d+)?$/.test(normalized);
         const num =
           typeof value === 'number'
             ? value
-            : parseFloat(String(value).trim().replace(/\s/g, '').replace(',', '.'));
+            : isStrictNumeric
+              ? parseFloat(normalized)
+              : NaN;
         const looksLikeAmount = !isNaN(num) && (num < EXCEL_SERIAL_DATE_MIN || num > EXCEL_SERIAL_DATE_MAX);
         if (!looksLikeAmount) dateCount++;
       }

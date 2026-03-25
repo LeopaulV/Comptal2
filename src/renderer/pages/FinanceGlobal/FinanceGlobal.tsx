@@ -688,7 +688,7 @@ const FinanceGlobal: React.FC = () => {
                         {Array.from(new Set([...bilanData.categoriesWithCredits, ...bilanData.categoriesWithDebits])).map((catName) => {
                           const totalCredits = (bilanData.creditsByCategory[catName] || []).reduce((a, b) => a + b, 0);
                           const totalDebits = (bilanData.debitsByCategory[catName] || []).reduce((a, b) => a + b, 0);
-                          const net = totalCredits - totalDebits;
+                          const net = totalCredits + totalDebits;
                           return (
                             <td key={catName} className="text-right font-medium">
                               <span className={net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
@@ -699,11 +699,11 @@ const FinanceGlobal: React.FC = () => {
                         })}
                         <td className="text-right font-medium">
                           <span className={
-                            (Object.keys(bilanData.creditsByCategory).reduce((s, cat) => s + (bilanData.creditsByCategory[cat] || []).reduce((a, b) => a + b, 0), 0) -
+                            (Object.keys(bilanData.creditsByCategory).reduce((s, cat) => s + (bilanData.creditsByCategory[cat] || []).reduce((a, b) => a + b, 0), 0) +
                             Object.keys(bilanData.debitsByCategory).reduce((s, cat) => s + (bilanData.debitsByCategory[cat] || []).reduce((a, b) => a + b, 0), 0)
                           ) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                             {formatCurrency(
-                              Object.keys(bilanData.creditsByCategory).reduce((s, cat) => s + (bilanData.creditsByCategory[cat] || []).reduce((a, b) => a + b, 0), 0) -
+                              Object.keys(bilanData.creditsByCategory).reduce((s, cat) => s + (bilanData.creditsByCategory[cat] || []).reduce((a, b) => a + b, 0), 0) +
                               Object.keys(bilanData.debitsByCategory).reduce((s, cat) => s + (bilanData.debitsByCategory[cat] || []).reduce((a, b) => a + b, 0), 0)
                             )}
                           </span>
@@ -766,7 +766,7 @@ const FinanceGlobal: React.FC = () => {
                         >
                           <span className={(projectionVsRealityData.realityByCategory[catIndex]?.[monthIndex] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {(projectionVsRealityData.realityByCategory[catIndex]?.[monthIndex] ?? 0) !== 0
-                              ? formatCurrency(Math.abs(projectionVsRealityData.realityByCategory[catIndex]?.[monthIndex] ?? 0))
+                              ? formatCurrency(projectionVsRealityData.realityByCategory[catIndex]?.[monthIndex] ?? 0)
                               : '-'}
                           </span>
                         </td>
@@ -776,7 +776,7 @@ const FinanceGlobal: React.FC = () => {
                         >
                           <span className={(projectionVsRealityData.projectionByCategory[projectionVsRealityData.categories[catIndex]]?.[monthIndex] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {(projectionVsRealityData.projectionByCategory[projectionVsRealityData.categories[catIndex]]?.[monthIndex] ?? 0) !== 0
-                              ? formatCurrency(Math.abs(projectionVsRealityData.projectionByCategory[projectionVsRealityData.categories[catIndex]]?.[monthIndex] ?? 0))
+                              ? formatCurrency(projectionVsRealityData.projectionByCategory[projectionVsRealityData.categories[catIndex]]?.[monthIndex] ?? 0)
                               : '-'}
                           </span>
                         </td>
@@ -788,7 +788,7 @@ const FinanceGlobal: React.FC = () => {
                     >
                       <span className={(projectionVsRealityData.realityTotals[monthIndex] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {(projectionVsRealityData.realityTotals[monthIndex] ?? 0) !== 0
-                          ? formatCurrency(Math.abs(projectionVsRealityData.realityTotals[monthIndex] ?? 0))
+                          ? formatCurrency(projectionVsRealityData.realityTotals[monthIndex] ?? 0)
                           : '-'}
                       </span>
                     </td>
@@ -798,7 +798,7 @@ const FinanceGlobal: React.FC = () => {
                     >
                       <span className={(projectionVsRealityData.projectionTotals[monthIndex] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
                         {(projectionVsRealityData.projectionTotals[monthIndex] ?? 0) !== 0
-                          ? formatCurrency(Math.abs(projectionVsRealityData.projectionTotals[monthIndex] ?? 0))
+                          ? formatCurrency(projectionVsRealityData.projectionTotals[monthIndex] ?? 0)
                           : '-'}
                       </span>
                     </td>
@@ -870,7 +870,7 @@ const FinanceGlobal: React.FC = () => {
                               style={getColorStyle(value)}
                             >
                               <span className={value >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                {value !== 0 ? formatCurrency(Math.abs(value)) : '-'}
+                                {value !== 0 ? formatCurrency(value) : '-'}
                               </span>
                             </td>
                           );
@@ -916,7 +916,7 @@ const FinanceGlobal: React.FC = () => {
                             style={getColorStyle(value)}
                           >
                             <span className={value >= 0 ? 'text-green-600' : 'text-red-600'}>
-                              {value !== 0 ? formatCurrency(Math.abs(value)) : '-'}
+                              {value !== 0 ? formatCurrency(value) : '-'}
                             </span>
                           </td>
                         ))}
@@ -974,7 +974,7 @@ const FinanceGlobal: React.FC = () => {
                               style={getColorStyle(value)}
                             >
                               <span className={value >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                {value !== 0 ? formatCurrency(Math.abs(value)) : '-'}
+                                {value !== 0 ? formatCurrency(value) : '-'}
                               </span>
                             </td>
                           );
@@ -1017,7 +1017,7 @@ const FinanceGlobal: React.FC = () => {
                             style={getColorStyle(value)}
                           >
                             <span className={value >= 0 ? 'text-green-600' : 'text-red-600'}>
-                              {value !== 0 ? formatCurrency(Math.abs(value)) : '-'}
+                              {value !== 0 ? formatCurrency(value) : '-'}
                             </span>
                           </td>
                         ))}

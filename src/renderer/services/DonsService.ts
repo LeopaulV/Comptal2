@@ -1,12 +1,11 @@
 import { Don, DonSerialized, DONATEUR_ANONYME_ID } from '../types/Association';
 import { FileService } from './FileService';
-
-const DONS_PATH = 'parametre/dons_manuels.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class DonsService {
   static async loadDons(): Promise<Don[]> {
     try {
-      const content = await FileService.readFile(DONS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('dons_manuels.json'));
       const parsed: DonSerialized[] = JSON.parse(content);
       return parsed.map((d) => ({
         ...d,
@@ -28,7 +27,7 @@ export class DonsService {
       createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : d.createdAt,
       updatedAt: d.updatedAt instanceof Date ? d.updatedAt.toISOString() : d.updatedAt,
     }));
-    await FileService.writeFile(DONS_PATH, JSON.stringify(serialized, null, 2));
+    await FileService.writeFile(await ProfilePaths.parametreFile('dons_manuels.json'), JSON.stringify(serialized, null, 2));
   }
 
   static async getDonsByDonateur(donateurId: string): Promise<Don[]> {

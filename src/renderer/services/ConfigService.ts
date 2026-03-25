@@ -7,6 +7,7 @@ import { WordStatsMap } from '../types/AutoCategorisation';
 import { ColorPalette } from '../types/ColorPalette';
 import { ProjectsConfig, Project, ProjectSerialized, Subscription, SubscriptionSerialized } from '../types/ProjectManagement';
 import { FileService } from './FileService';
+import { ProfilePaths } from './ProfilePaths';
 
 export class ConfigService {
   private static accountsCache: AccountsConfig | null = null;
@@ -25,7 +26,7 @@ export class ConfigService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/account.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('account.json'));
       this.accountsCache = JSON.parse(content);
       return this.accountsCache!;
     } catch (error: any) {
@@ -43,7 +44,7 @@ export class ConfigService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/categories.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('categories.json'));
       this.categoriesCache = JSON.parse(content);
       return this.categoriesCache!;
     } catch (error: any) {
@@ -61,7 +62,7 @@ export class ConfigService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/settings.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('settings.json'));
       const settings = JSON.parse(content);
       
       // Fusionner les paramètres avec les valeurs par défaut
@@ -73,12 +74,18 @@ export class ConfigService {
           ? { ...DEFAULT_MENU_VISIBILITY, ...settings.menuVisibility }
           : DEFAULT_MENU_VISIBILITY,
       };
+      mergedSettings.dataDirectory = await ProfilePaths.getDataDirectory();
       
       this.settingsCache = mergedSettings;
       return this.settingsCache!;
     } catch (error: any) {
       console.warn('Paramètres non trouvés, utilisation des paramètres par défaut');
-      this.settingsCache = DEFAULT_SETTINGS;
+      const fallback: AppSettings = {
+        ...DEFAULT_SETTINGS,
+        menuVisibility: DEFAULT_MENU_VISIBILITY,
+        dataDirectory: await ProfilePaths.getDataDirectory(),
+      };
+      this.settingsCache = fallback;
       return this.settingsCache;
     }
   }
@@ -88,9 +95,11 @@ export class ConfigService {
    */
   static async saveSettings(settings: AppSettings): Promise<void> {
     try {
-      const content = JSON.stringify(settings, null, 2);
-      await FileService.writeFile('parametre/settings.json', content);
-      this.settingsCache = settings;
+      const dataDir = await ProfilePaths.getDataDirectory();
+      const toSave: AppSettings = { ...settings, dataDirectory: dataDir };
+      const content = JSON.stringify(toSave, null, 2);
+      await FileService.writeFile(await ProfilePaths.parametreFile('settings.json'), content);
+      this.settingsCache = toSave;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des paramètres: ${error.message}`);
     }
@@ -102,7 +111,7 @@ export class ConfigService {
   static async saveAccounts(accounts: AccountsConfig): Promise<void> {
     try {
       const content = JSON.stringify(accounts, null, 4);
-      await FileService.writeFile('parametre/account.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('account.json'), content);
       this.accountsCache = accounts;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des comptes: ${error.message}`);
@@ -115,7 +124,7 @@ export class ConfigService {
   static async saveCategories(categories: CategoriesConfig): Promise<void> {
     try {
       const content = JSON.stringify(categories, null, 4);
-      await FileService.writeFile('parametre/categories.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('categories.json'), content);
       this.categoriesCache = categories;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des catégories: ${error.message}`);
@@ -131,7 +140,7 @@ export class ConfigService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/auto_categorisation.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('auto_categorisation.json'));
       this.autoCategorisationCache = JSON.parse(content);
       return this.autoCategorisationCache!;
     } catch (error: any) {
@@ -148,7 +157,7 @@ export class ConfigService {
   static async saveAutoCategorisationStats(stats: WordStatsMap): Promise<void> {
     try {
       const content = JSON.stringify(stats, null, 2);
-      await FileService.writeFile('parametre/auto_categorisation.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('auto_categorisation.json'), content);
       this.autoCategorisationCache = stats;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des stats d'auto-catégorisation: ${error.message}`);
@@ -164,7 +173,7 @@ export class ConfigService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/color_palettes.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('color_palettes.json'));
       this.colorPalettesCache = JSON.parse(content);
       return this.colorPalettesCache!;
     } catch (error: any) {
@@ -180,7 +189,7 @@ export class ConfigService {
   static async saveColorPalettes(palettes: ColorPalette[]): Promise<void> {
     try {
       const content = JSON.stringify(palettes, null, 2);
-      await FileService.writeFile('parametre/color_palettes.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('color_palettes.json'), content);
       this.colorPalettesCache = palettes;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des palettes: ${error.message}`);
@@ -202,7 +211,7 @@ export class ConfigService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/projects.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('projects.json'));
       this.projectsCache = JSON.parse(content);
       return this.projectsCache!;
     } catch (error: any) {
@@ -218,7 +227,7 @@ export class ConfigService {
   static async saveProjects(projects: ProjectsConfig): Promise<void> {
     try {
       const content = JSON.stringify(projects, null, 2);
-      await FileService.writeFile('parametre/projects.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('projects.json'), content);
       this.projectsCache = projects;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des projets: ${error.message}`);
@@ -431,6 +440,7 @@ export class ConfigService {
     this.autoCategorisationCache = null;
     this.colorPalettesCache = null;
     this.projectsCache = null;
+    ProfilePaths.invalidate();
   }
 }
 

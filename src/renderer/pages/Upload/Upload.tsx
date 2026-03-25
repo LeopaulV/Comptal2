@@ -15,6 +15,7 @@ import { CSVTransformService } from '../../services/CSVTransformService';
 import { ExcelSheetService } from '../../services/ExcelSheetService';
 import { BalanceService } from '../../services/BalanceService';
 import { ConfigService } from '../../services/ConfigService';
+import { ProfilePaths } from '../../services/ProfilePaths';
 import { FileService } from '../../services/FileService';
 import { DataService } from '../../services/DataService';
 import { FileAnalysisResult } from '../../types/FileAnalysis';
@@ -596,7 +597,7 @@ const Upload: React.FC = () => {
             const startDateObj = parse(config.startDate || '', 'yyyy-MM-dd', new Date());
             const endDateObj = parse(config.endDate || '', 'yyyy-MM-dd', new Date());
             const fileName = `${config.accountCode}_${format(startDateObj, 'dd.MM.yyyy')}_${format(endDateObj, 'dd.MM.yyyy')}.csv`;
-            const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
+            const dataDir = await ProfilePaths.getDataDirectory();
 
             await FileService.writeFile(`${dataDir}/${fileName}`, csvContent);
 
@@ -656,7 +657,7 @@ const Upload: React.FC = () => {
         const startDateObj = parse(dateRange.startDate, 'yyyy-MM-dd', new Date());
         const endDateObj = parse(dateRange.endDate, 'yyyy-MM-dd', new Date());
         const fileName = `${selectedAccountCode}_${format(startDateObj, 'dd.MM.yyyy')}_${format(endDateObj, 'dd.MM.yyyy')}.csv`;
-        const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
+        const dataDir = await ProfilePaths.getDataDirectory();
 
         await FileService.writeFile(`${dataDir}/${fileName}`, csvContent);
 

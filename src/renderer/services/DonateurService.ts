@@ -1,9 +1,7 @@
 import { Donateur, DonateurSerialized, DonateurTransactionMapping } from '../types/Association';
 import { FileService } from './FileService';
 import { DataService } from './DataService';
-
-const DONATEURS_PATH = 'parametre/donateurs.json';
-const DONATEUR_TRANSACTIONS_PATH = 'parametre/donateur_transactions.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class DonateurService {
   private static cache: Donateur[] | null = null;
@@ -14,7 +12,7 @@ export class DonateurService {
       return this.cache;
     }
     try {
-      const content = await FileService.readFile(DONATEURS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('donateurs.json'));
       const parsed: DonateurSerialized[] = JSON.parse(content);
       const donateurs = parsed.map((d) => ({
         ...d,
@@ -36,7 +34,7 @@ export class DonateurService {
       updatedAt: d.updatedAt.toISOString(),
     }));
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(DONATEURS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('donateurs.json'), content);
     this.cache = donateurs;
   }
 
@@ -137,7 +135,7 @@ export class DonateurService {
   static async loadTransactionMapping(): Promise<DonateurTransactionMapping> {
     if (this.mappingCache) return this.mappingCache;
     try {
-      const content = await FileService.readFile(DONATEUR_TRANSACTIONS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('donateur_transactions.json'));
       this.mappingCache = JSON.parse(content);
       return this.mappingCache!;
     } catch {
@@ -148,7 +146,7 @@ export class DonateurService {
 
   static async saveTransactionMapping(mapping: DonateurTransactionMapping): Promise<void> {
     const content = JSON.stringify(mapping, null, 2);
-    await FileService.writeFile(DONATEUR_TRANSACTIONS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('donateur_transactions.json'), content);
     this.mappingCache = mapping;
   }
 

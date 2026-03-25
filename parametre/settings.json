@@ -7,6 +7,7 @@
   "autoSave": true,
   "showBalance": true,
   "defaultView": "dashboard",
+  "onboardingCompleted": true,
   "menuVisibility": {
     "dashboard": true,
     "upload": true,
@@ -17,14 +18,3 @@
     "association": true
   }
 }
-{
-  "theme": "light",
-  "language": "fr",
-  "currency": "€",
-  "dateFormat": "DD/MM/YYYY",
-  "dataDirectory": "./data",
-  "autoSave": true,
-  "showBalance": true,
-  "defaultView": "dashboard"
-}
-

@@ -2,6 +2,7 @@
 
 import { FileService } from './FileService';
 import { ConfigService } from './ConfigService';
+import { ProfilePaths } from './ProfilePaths';
 import Papa from 'papaparse';
 
 export interface Inconsistency {
@@ -37,7 +38,8 @@ export class CSVValidationService {
    */
   static async validateFile(fileName: string): Promise<ValidationResult> {
     try {
-      const filePath = `data/${fileName}`;
+      const dataDir = await ProfilePaths.getDataDirectory();
+      const filePath = `${dataDir}/${fileName}`;
       const content = await FileService.readFile(filePath);
       const bankAccounts = await ConfigService.loadAccounts();
 
@@ -116,7 +118,7 @@ export class CSVValidationService {
    */
   static async detectAllInconsistencies(): Promise<Inconsistency[]> {
     try {
-      const files = await FileService.readDirectory('data');
+      const files = await FileService.readDirectory(await ProfilePaths.getDataDirectory());
       const csvFiles = files.filter(file => file.endsWith('.csv'));
 
       const allInconsistencies: Inconsistency[] = [];
@@ -142,7 +144,8 @@ export class CSVValidationService {
    */
   static async correctCompteFromSource(fileName: string): Promise<{ corrected: number; errors: number }> {
     try {
-      const filePath = `data/${fileName}`;
+      const dataDir = await ProfilePaths.getDataDirectory();
+      const filePath = `${dataDir}/${fileName}`;
       const content = await FileService.readFile(filePath);
       const bankAccounts = await ConfigService.loadAccounts();
 
@@ -216,7 +219,8 @@ export class CSVValidationService {
    */
   static async splitFileByCompte(fileName: string): Promise<{ createdFiles: string[]; errors: number }> {
     try {
-      const filePath = `data/${fileName}`;
+      const dataDir = await ProfilePaths.getDataDirectory();
+      const filePath = `${dataDir}/${fileName}`;
       const content = await FileService.readFile(filePath);
       const bankAccounts = await ConfigService.loadAccounts();
 
@@ -295,7 +299,7 @@ export class CSVValidationService {
         });
 
         // Sauvegarder le fichier
-        const newFilePath = `data/${newFileName}`;
+        const newFilePath = `${dataDir}/${newFileName}`;
         await FileService.writeFile(newFilePath, csv);
         createdFiles.push(newFileName);
 

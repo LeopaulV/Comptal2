@@ -22,4 +22,5 @@ export * from './PDFTemplateService';
 export * from './LegalMentionsService';
 export * from './StockService';
 export * from './ProfileService';
+export * from './ProfilePaths';
 

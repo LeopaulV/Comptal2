@@ -3,6 +3,7 @@
 import Papa from 'papaparse';
 import { FileService } from './FileService';
 import { ConfigService } from './ConfigService';
+import { ProfilePaths } from './ProfilePaths';
 import { EditionRow, EditionData, DuplicateRowEntry } from '../types/Edition';
 import { parse, isValid } from 'date-fns';
 import { AutoCategorisationService } from './AutoCategorisationService';
@@ -118,9 +119,7 @@ export class EditionService {
       // Charger les comptes bancaires pour filtrer les sources
       const bankAccounts = await ConfigService.loadAccounts();
       
-      // Charger le chemin du dossier de données depuis les settings
-      const settings = await ConfigService.loadSettings();
-      const dataDirectory = settings.dataDirectory || 'data';
+      const dataDirectory = await ProfilePaths.getDataDirectory();
       
       // Lire tous les fichiers CSV du dossier de données
       const files = await FileService.readDirectoryOptional(dataDirectory);
@@ -313,9 +312,7 @@ export class EditionService {
    */
   static async saveEditionData(rows: EditionRow[]): Promise<void> {
     try {
-      // Charger le chemin du dossier de données depuis les settings
-      const settings = await ConfigService.loadSettings();
-      const dataDirectory = settings.dataDirectory || 'data';
+      const dataDirectory = await ProfilePaths.getDataDirectory();
       
       // Filtrer les lignes actives (non supprimées)
       const activeRows = rows.filter(row => !row.deleted);
@@ -687,8 +684,7 @@ export class EditionService {
     duplicates: DuplicateRowEntry[];
     inconsistenciesCount: number;
   }> {
-    const settings = await ConfigService.loadSettings();
-    const dataDirectory = settings.dataDirectory || 'data';
+    const dataDirectory = await ProfilePaths.getDataDirectory();
     const files = await FileService.readDirectory(dataDirectory);
     const csvFiles = files.filter(file => file.endsWith('.csv'));
     const bankAccounts = await ConfigService.loadAccounts();
@@ -766,8 +762,7 @@ export class EditionService {
       byFile.get(fileName)!.add(rowIndex);
     }
 
-    const settings = await ConfigService.loadSettings();
-    const dataDirectory = settings.dataDirectory || 'data';
+    const dataDirectory = await ProfilePaths.getDataDirectory();
     const bankAccounts = await ConfigService.loadAccounts();
 
     let removed = 0;

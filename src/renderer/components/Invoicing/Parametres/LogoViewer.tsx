@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, Upload, Trash2, ExternalLink, Image } from 'lucide-react';
+import { ProfilePaths } from '../../../services/ProfilePaths';
 
 interface LogoViewerProps {
   logo?: string;
@@ -61,7 +62,8 @@ export const LogoViewer: React.FC<LogoViewerProps> = ({ logo, onLogoChange }) =>
       const extension = matches[1] === 'jpeg' ? 'jpg' : matches[1];
       const base64Data = matches[2];
       const tempFileName = `temp_logo_${Date.now()}.${extension}`;
-      const tempPath = `data/attachments/${tempFileName}`;
+      const dataDir = await ProfilePaths.getDataDirectory();
+      const tempPath = `${dataDir}/attachments/${tempFileName}`;
 
       // Sauvegarder temporairement le logo
       const writeResult = await window.electronAPI.writeBinaryFile(tempPath, base64Data);

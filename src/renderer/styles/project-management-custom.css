@@ -578,24 +578,24 @@
    ============================================ */
 .graph-carousel-container {
   flex: 1;
-  position: relative;
-  width: 100%;
+  /* On enlève le plafond de hauteur pour respecter la min-height "fixe minimale" */
+  max-height: none;
+  min-height: 550px;
   display: flex;
   flex-direction: column;
-  background-color: white;
-  border: 1px solid var(--project-gray-300);
+  background-color: #ffffff;
+  border: 1px solid var(--project-gray-200);
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-md);
-  overflow: hidden;
-  min-height: 480px;
-  transition: all 0.3s ease;
 }
 
-.dark .graph-carousel-container {
+.dark .graph-carousel-container,
+html.dark .graph-carousel-container {
   background-color: var(--project-gray-200);
   border-color: var(--project-gray-400);
   box-shadow: var(--shadow-lg);
+  color: #f1f5f9;
 }
 
 .graph-carousel-viewport {
@@ -831,6 +831,81 @@
   border-color: var(--project-primary);
   width: 24px;
   border-radius: 5px;
+}
+
+/* ============================================
+   CONTROLES "PAR PAGE" (modèle Entreprise/Association)
+   ============================================ */
+.graph-carousel-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--project-gray-200);
+  flex-shrink: 0;
+}
+
+.dark .graph-carousel-controls,
+html.dark .graph-carousel-controls {
+  border-top-color: var(--project-gray-400);
+}
+
+.graph-carousel-tab {
+  padding: 10px 20px;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--project-gray-300);
+  background-color: var(--project-gray-50);
+  color: var(--project-gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.graph-carousel-tab:hover {
+  background-color: var(--project-gray-100);
+  border-color: var(--project-gray-400);
+  color: var(--project-gray-900);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.graph-carousel-tab.active {
+  background-color: var(--project-primary);
+  color: #fff;
+  border-color: var(--project-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.graph-carousel-tab.active:hover {
+  background-color: var(--project-primary-lightest);
+  border-color: var(--project-primary-lightest);
+}
+
+.dark .graph-carousel-tab,
+html.dark .graph-carousel-tab {
+  background-color: var(--project-gray-200);
+  color: var(--project-gray-600);
+  border-color: var(--project-gray-400);
+}
+
+.dark .graph-carousel-tab:hover,
+html.dark .graph-carousel-tab:hover {
+  background-color: var(--project-gray-300);
+  color: var(--project-gray-800);
+  border-color: var(--project-gray-500);
+}
+
+.dark .graph-carousel-tab.active,
+html.dark .graph-carousel-tab.active {
+  background-color: var(--project-primary-light);
+  color: #ffffff;
+  border-color: var(--project-primary-light);
 }
 
 /* Configuration compacte */

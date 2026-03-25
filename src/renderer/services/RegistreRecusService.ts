@@ -1,13 +1,12 @@
 import { ReceiptEntry } from '../types/Association';
 import { FileService } from './FileService';
 import { AssociationConfigService } from './AssociationConfigService';
-
-const REGISTRE_PATH = 'parametre/registre_recus.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class RegistreRecusService {
   static async loadRegistre(): Promise<ReceiptEntry[]> {
     try {
-      const content = await FileService.readFile(REGISTRE_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('registre_recus.json'));
       return JSON.parse(content) as ReceiptEntry[];
     } catch {
       return [];
@@ -15,7 +14,7 @@ export class RegistreRecusService {
   }
 
   static async saveRegistre(entries: ReceiptEntry[]): Promise<void> {
-    await FileService.writeFile(REGISTRE_PATH, JSON.stringify(entries, null, 2));
+    await FileService.writeFile(await ProfilePaths.parametreFile('registre_recus.json'), JSON.stringify(entries, null, 2));
   }
 
   /** Génère le prochain numéro séquentiel et l'incrémente dans la config */

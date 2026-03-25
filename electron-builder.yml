@@ -63,7 +63,7 @@ dmg:
 
 linux:
   target:
-    - target: AppImage
+    - target: dir
       arch:
         - x64
   icon: build/icon.png

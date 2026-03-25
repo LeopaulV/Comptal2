@@ -308,7 +308,14 @@
     "dataFilesEmpty": "Aucun fichier dans ce dossier",
     "dataFileDelete": "Supprimer ce fichier CSV",
     "dataFileDeleteConfirm": "Êtes-vous sûr de vouloir supprimer le fichier {{file}} ? Cette action est irréversible.",
-    "dataFileDeleteError": "Erreur lors de la suppression : {{error}}"
+    "dataFileDeleteError": "Erreur lors de la suppression : {{error}}",
+    "guidedTourSection": "Didacticiel",
+    "guidedTourOnStartup": "Proposer le didacticiel au démarrage",
+    "guidedTourOnStartupDescription": "Lorsque cette option est activée, le tutoriel interactif s’affiche tant que vous ne l’avez pas terminé ou ignoré. Désactivez-la pour ne plus le voir au lancement (vous pourrez toujours le relancer avec le bouton ci-dessous).",
+    "guidedTourStartNow": "Lancer le didacticiel maintenant",
+    "guidedTourSaveSuccess": "Préférence enregistrée pour ce profil.",
+    "guidedTourSaveError": "Impossible d’enregistrer : {{error}}",
+    "guidedTourLaunchHint": "Le didacticiel démarre…"
   },
   "profiles": {
     "title": "Gestion des profils",
@@ -451,14 +458,24 @@
         "description": "Cliquez sur 'Ajouter un compte' pour créer un compte bancaire",
         "tooltip": "C'est ici qu'il faut cliquer !"
       },
-      "importData": {
-        "title": "Importez vos données",
-        "description": "Glissez-déposez vos fichiers CSV ou Excel ici",
-        "tooltip": "Déposez vos fichiers bancaires ici"
+      "importMappingInfo": {
+        "title": "Associer les colonnes de votre fichier",
+        "description": "Une fois le fichier choisi, une fenêtre s’ouvre : indiquez quelle colonne du relevé correspond à chaque champ attendu par Comptal2.\n\nColonnes obligatoires :\n• Date — date de l’opération (souvent « date comptable » ou « date d’opération »)\n• Libellé — libellé / description de la transaction\n• Montants — soit deux colonnes Débit et Crédit, soit une seule colonne « Débit/Crédit combiné » (montants + et −)\n\nLa date de valeur est optionnelle : indiquez-la seulement si votre banque la fournit dans une colonne distincte ; sinon, la date principale suffit.\n\nSi la détection automatique est incorrecte, modifiez chaque menu déroulant jusqu’à ce que l’aperçu soit cohérent.\n\nValidez puis terminez l’import : dès qu’un CSV est enregistré dans ce profil, le didacticiel passera automatiquement à l’étape suivante.",
+        "tooltip": "Correspondance des colonnes"
+      },
+      "importFile": {
+        "title": "Importez votre relevé",
+        "description": "Commencez par glisser-déposer ici votre fichier CSV ou Excel et choisir le compte concerné.\n\nL’étape suivante du tutoriel explique en détail la fenêtre de correspondance des colonnes (date, libellé, débit/crédit, date de valeur), au moment où vous la voyez à l’écran.\n\nAppuyez sur Suivant lorsque vous êtes prêt à sélectionner votre fichier.",
+        "tooltip": "Zone d’import"
+      },
+      "categoryTransferX": {
+        "title": "Catégorie X : transferts entre vos comptes",
+        "description": "Le code X désigne les transferts inter-comptes (TIC) : toutes les opérations qui ne font que déplacer de l’argent d’un de vos comptes vers un autre, sans dépense ni revenu réel pour vous.\n\nExemple : virement du livret A vers le compte courant.\n\nCes mouvements ne doivent pas être comptés comme dépenses ou revenus dans vos analyses : classez-les en X pour les exclure correctement.",
+        "tooltip": "Transferts inter-comptes"
       },
       "createCategory": {
         "title": "Créez vos catégories",
-        "description": "Organisez vos transactions avec des catégories personnalisées",
+        "description": "En complément de X et des catégories par défaut, ajoutez vos propres catégories pour organiser vos transactions.",
         "tooltip": "Gérez vos catégories ici"
       }
     },
@@ -654,6 +671,8 @@
       "configureAccounts": "Configurez les comptes de projection pour voir le graphique"
     },
     "carousel": {
+      "page1": "Dashboard",
+      "page2": "Répartition",
       "previous": "Page précédente",
       "next": "Page suivante",
       "goToPage": "Aller à la page {{page}}"

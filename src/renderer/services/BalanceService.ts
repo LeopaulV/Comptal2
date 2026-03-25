@@ -1,7 +1,7 @@
 // Service pour gérer les soldes initiaux des comptes
 
 import { FileService } from './FileService';
-import { ConfigService } from './ConfigService';
+import { ProfilePaths } from './ProfilePaths';
 import { DataService } from './DataService';
 import { parse, format, isValid } from 'date-fns';
 import Papa from 'papaparse';
@@ -27,7 +27,7 @@ export class BalanceService {
     }
 
     try {
-      const content = await FileService.readFile('parametre/solde_compte.json');
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('solde_compte.json'));
       this.balanceCache = JSON.parse(content);
       return this.balanceCache!;
     } catch (error: any) {
@@ -44,7 +44,7 @@ export class BalanceService {
   static async saveBalances(balances: BalanceData): Promise<void> {
     try {
       const content = JSON.stringify(balances, null, 2);
-      await FileService.writeFile('parametre/solde_compte.json', content);
+      await FileService.writeFile(await ProfilePaths.parametreFile('solde_compte.json'), content);
       this.balanceCache = balances;
     } catch (error: any) {
       throw new Error(`Erreur lors de la sauvegarde des soldes: ${error.message}`);
@@ -183,10 +183,7 @@ export class BalanceService {
     try {
       console.log(`[Import] Recherche solde initial dans CSV pour ${accountCode} avant ${startDate}`);
       
-      // Charger le chemin du dossier de données depuis les settings
-      const settings = await ConfigService.loadSettings();
-      const dataDirectory = settings.dataDirectory || 'data';
-      
+      const dataDirectory = await ProfilePaths.getDataDirectory();
       // Lister tous les fichiers CSV dans le dossier de données
       const files = await FileService.readDirectory(dataDirectory);
       const csvFiles = files.filter(file => file.endsWith('.csv'));
@@ -243,9 +240,7 @@ export class BalanceService {
 
       // Lire le fichier CSV et extraire le dernier solde
       try {
-        // Charger le chemin du dossier de données depuis les settings
-        const settings = await ConfigService.loadSettings();
-        const dataDirectory = settings.dataDirectory || 'data';
+        const dataDirectory = await ProfilePaths.getDataDirectory();
         const content = await FileService.readFile(`${dataDirectory}/${mostRecentFile.fileName}`);
         
         return new Promise((resolve) => {

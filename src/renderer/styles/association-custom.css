@@ -46,7 +46,7 @@ html.dark .association-title {
 /* Menu latéral – aligné sur invoicing-menu */
 .association-menu {
   width: 240px;
-  background: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 12px;
   padding: 16px;
@@ -126,7 +126,7 @@ html.dark .association-menu-item.active {
 
 /* Cartes et en-têtes – cohérents avec invoicing-card */
 .association-card {
-  background: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 16px;
   padding: 24px;
@@ -252,7 +252,7 @@ html.dark .association-config-preview h3 {
 
 /* Reçu fiscal – aperçu */
 .recu-fiscal-preview {
-  background: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 12px;
   padding: 20px;
@@ -402,10 +402,16 @@ html.dark .association-form-status.error {
    ============================================ */
 .association-page .invoicing-carousel-container {
   flex: 1;
-  max-height: min(90vh, 100%);
-  min-height: 320px;
+  /* On enlève le plafond de hauteur pour respecter la min-height "fixe minimale" */
+  max-height: none;
+  min-height: 550px;
   display: flex;
   flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid var(--project-gray-200);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
 }
 
 .association-page .invoicing-carousel-viewport {
@@ -498,7 +504,7 @@ html.dark .association-input-date:focus {
    REGISTRE DES REÇUS FISCAUX
    ============================================ */
 .association-registre-panel {
-  background: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 12px;
   padding: 24px;
@@ -819,6 +825,90 @@ html.dark .association-registre-badge--annule {
   display: flex;
   gap: 6px;
   align-items: center;
+}
+
+/* Formulaire Donateur - bloc catégorie */
+.donateur-category-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.donateur-category-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.donateur-category-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.donateur-category-create-btn {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+
+.donateur-category-create-panel {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--invoicing-gray-50);
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-200);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dark .donateur-category-create-panel,
+html.dark .donateur-category-create-panel {
+  background: var(--invoicing-gray-300);
+  border-color: var(--invoicing-gray-400);
+}
+
+.donateur-category-code-field {
+  flex: 0 0 120px;
+  min-width: 0;
+}
+
+.donateur-category-name-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.donateur-category-save-btn {
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .donateur-category-row {
+    flex-wrap: wrap;
+  }
+
+  .donateur-category-create-btn {
+    width: 100%;
+  }
+
+  .donateur-category-create-panel {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .donateur-category-code-field,
+  .donateur-category-name-field {
+    flex: 1 1 100%;
+  }
+
+  .donateur-category-save-btn {
+    width: 100%;
+  }
 }
 
 .association-registre-btn {

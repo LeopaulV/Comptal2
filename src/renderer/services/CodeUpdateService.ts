@@ -3,6 +3,7 @@
 import Papa from 'papaparse';
 import { FileService } from './FileService';
 import { ConfigService } from './ConfigService';
+import { ProfilePaths } from './ProfilePaths';
 
 export class CodeUpdateService {
   private static readonly DELIMITER = ';';
@@ -15,8 +16,9 @@ export class CodeUpdateService {
    */
   static async updateCategoryCodeInCSV(oldCode: string, newCode: string): Promise<number> {
     try {
+      const dataDir = await ProfilePaths.getDataDirectory();
       // Charger tous les fichiers CSV
-      const files = await FileService.readDirectory('data');
+      const files = await FileService.readDirectory(dataDir);
       const csvFiles = files.filter(file => file.endsWith('.csv'));
 
       if (csvFiles.length === 0) {
@@ -34,7 +36,7 @@ export class CodeUpdateService {
         await Promise.all(
           chunk.map(async (fileName) => {
             try {
-              const filePath = `data/${fileName}`;
+              const filePath = `${dataDir}/${fileName}`;
               const content = await FileService.readFile(filePath);
 
               // Parser le CSV
@@ -126,8 +128,9 @@ export class CodeUpdateService {
         }
       }
 
+      const dataDir = await ProfilePaths.getDataDirectory();
       // Charger tous les fichiers CSV
-      const files = await FileService.readDirectory('data');
+      const files = await FileService.readDirectory(dataDir);
       const csvFiles = files.filter(file => file.endsWith('.csv'));
 
       if (csvFiles.length === 0) {
@@ -156,12 +159,12 @@ export class CodeUpdateService {
         await Promise.all(
           chunk.map(async (oldFileName) => {
             try {
-              const oldFilePath = `data/${oldFileName}`;
+              const oldFilePath = `${dataDir}/${oldFileName}`;
               const content = await FileService.readFile(oldFilePath);
 
               // Générer le nouveau nom de fichier
               const newFileName = oldFileName.replace(new RegExp(`^${oldCode}_`, 'i'), `${newCode}_`);
-              const newFilePath = `data/${newFileName}`;
+              const newFilePath = `${dataDir}/${newFileName}`;
 
               // Parser le CSV
               const parseResult = await new Promise<any>((resolve, reject) => {

@@ -73,7 +73,7 @@ html.dark .invoicing-page {
 
 .invoicing-menu {
   width: 240px;
-  background: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 12px;
   padding: 16px;
@@ -178,15 +178,16 @@ html.dark .invoicing-title {
    ============================================ */
 .invoicing-carousel-container {
   flex: 1;
-  background-color: var(--invoicing-gray-50);
-  border: 1px solid var(--invoicing-gray-300);
+  /* On enlève le plafond de hauteur pour respecter la min-height "fixe minimale" */
+  max-height: none;
+  min-height: 570px;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid var(--project-gray-200);
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-md);
-  min-height: 420px;
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
 }
 
 .dark .invoicing-carousel-container,
@@ -238,7 +239,7 @@ html.dark .invoicing-carousel-container {
 }
 
 .invoicing-info-box {
-  background-color: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 8px;
   padding: 16px;
@@ -318,7 +319,7 @@ html.dark .invoicing-info-box-value {
 }
 
 .invoicing-graph-card {
-  background-color: var(--invoicing-gray-50);
+  background-color: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 8px;
   padding: 16px;
@@ -869,7 +870,7 @@ html.dark .invoicing-carousel-tab.active:hover {
 }
 
 .invoicing-card {
-  background: linear-gradient(135deg, var(--invoicing-gray-50) 0%, #ffffff 100%);
+  background: #ffffff;
   border: 1px solid var(--invoicing-gray-200);
   border-radius: 16px;
   padding: 28px;
@@ -2287,7 +2288,7 @@ html.dark .invoicing-transaction-total strong {
 
 @media (max-width: 640px) {
   .invoicing-carousel-container {
-    min-height: 500px;
+    min-height: 480px;
     padding: 16px;
   }
 

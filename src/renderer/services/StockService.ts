@@ -8,16 +8,13 @@ import {
   StockCategorieSerialized,
 } from '../types/Stock';
 import { FileService } from './FileService';
+import { ProfilePaths } from './ProfilePaths';
 import {
   ChartGranularity,
   getPeriodKey,
   getPeriodKeysInRange,
   sortPeriodKeys,
 } from './DataService';
-
-const ARTICLES_PATH = 'parametre/stock_articles.json';
-const CATEGORIES_PATH = 'parametre/stock_categories.json';
-const MOUVEMENTS_PATH = 'parametre/stock_mouvements.json';
 
 /** Stockage inventaire : les articles de type stock/consommable et leur consommationHebdo (clé YYYY-Www) sont dans stock_articles.json */
 export class StockService {
@@ -28,7 +25,7 @@ export class StockService {
   static async loadArticles(): Promise<ArticleStock[]> {
     if (this.articlesCache) return [...this.articlesCache];
     try {
-      const content = await FileService.readFile(ARTICLES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('stock_articles.json'));
       const parsed: ArticleStockSerialized[] = JSON.parse(content);
       const data = parsed.map((item) => this.deserializeArticle(item));
       this.articlesCache = data;
@@ -41,7 +38,7 @@ export class StockService {
 
   static async saveArticles(articles: ArticleStock[]): Promise<void> {
     const serialized = articles.map((item) => this.serializeArticle(item));
-    await FileService.writeFile(ARTICLES_PATH, JSON.stringify(serialized, null, 2));
+    await FileService.writeFile(await ProfilePaths.parametreFile('stock_articles.json'), JSON.stringify(serialized, null, 2));
     this.articlesCache = articles;
   }
 
@@ -71,7 +68,7 @@ export class StockService {
   static async loadCategories(): Promise<StockCategorie[]> {
     if (this.categoriesCache) return [...this.categoriesCache];
     try {
-      const content = await FileService.readFile(CATEGORIES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('stock_categories.json'));
       const parsed: StockCategorieSerialized[] = JSON.parse(content);
       const data = parsed.map((item) => ({
         ...item,
@@ -92,7 +89,7 @@ export class StockService {
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     }));
-    await FileService.writeFile(CATEGORIES_PATH, JSON.stringify(serialized, null, 2));
+    await FileService.writeFile(await ProfilePaths.parametreFile('stock_categories.json'), JSON.stringify(serialized, null, 2));
     this.categoriesCache = categories;
   }
 
@@ -128,7 +125,7 @@ export class StockService {
   static async loadMouvements(): Promise<MouvementStock[]> {
     if (this.mouvementsCache) return this.mouvementsCache;
     try {
-      const content = await FileService.readFile(MOUVEMENTS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('stock_mouvements.json'));
       const parsed: MouvementStockSerialized[] = JSON.parse(content);
       const data = parsed.map((item) => ({ ...item, date: new Date(item.date) }));
       this.mouvementsCache = data;
@@ -144,7 +141,7 @@ export class StockService {
       ...item,
       date: item.date.toISOString(),
     }));
-    await FileService.writeFile(MOUVEMENTS_PATH, JSON.stringify(serialized, null, 2));
+    await FileService.writeFile(await ProfilePaths.parametreFile('stock_mouvements.json'), JSON.stringify(serialized, null, 2));
     this.mouvementsCache = mouvements;
   }
 

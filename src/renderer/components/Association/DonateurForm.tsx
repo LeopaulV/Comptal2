@@ -102,14 +102,14 @@ export const DonateurForm: React.FC<DonateurFormProps> = ({
           </select>
         </label>
 
-        <div>
+        <div className="donateur-category-field">
           <label>
             {t('association.gestion.category')}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="donateur-category-row">
               <select
                 value={donateur.categoryCode || ''}
                 onChange={(e) => setDonateur({ ...donateur, categoryCode: e.target.value || undefined })}
-                style={{ flex: 1 }}
+                className="donateur-category-select"
               >
                 <option value="">{t('association.gestion.noCategory')}</option>
                 {categoryEntries.map(([code, cat]) => (
@@ -120,8 +120,7 @@ export const DonateurForm: React.FC<DonateurFormProps> = ({
               </select>
               <button
                 type="button"
-                className="secondary"
-                style={{ whiteSpace: 'nowrap', fontSize: 12, padding: '4px 10px' }}
+                className="secondary donateur-category-create-btn"
                 onClick={() => setShowNewCategory((prev) => !prev)}
               >
                 {t('association.gestion.createCategory')}
@@ -129,19 +128,8 @@ export const DonateurForm: React.FC<DonateurFormProps> = ({
             </div>
           </label>
           {showNewCategory && (
-            <div
-              style={{
-                display: 'flex',
-                gap: 8,
-                alignItems: 'flex-end',
-                marginTop: 8,
-                padding: '10px 12px',
-                background: 'var(--invoicing-gray-50)',
-                borderRadius: 8,
-                border: '1px solid var(--invoicing-gray-200)',
-              }}
-            >
-              <label style={{ flex: '0 0 100px' }}>
+            <div className="donateur-category-create-panel">
+              <label className="donateur-category-code-field">
                 {t('association.gestion.categoryCode')}
                 <input
                   type="text"
@@ -151,7 +139,7 @@ export const DonateurForm: React.FC<DonateurFormProps> = ({
                   maxLength={10}
                 />
               </label>
-              <label style={{ flex: 1 }}>
+              <label className="donateur-category-name-field">
                 {t('association.gestion.categoryName')}
                 <input
                   type="text"
@@ -162,8 +150,7 @@ export const DonateurForm: React.FC<DonateurFormProps> = ({
               </label>
               <button
                 type="button"
-                className="primary"
-                style={{ padding: '6px 14px', fontSize: 13 }}
+                className="primary donateur-category-save-btn"
                 onClick={handleCreateCategory}
                 disabled={!newCatCode.trim() || !newCatName.trim()}
               >

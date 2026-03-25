@@ -119,8 +119,8 @@ const TourNotification: React.FC<TourNotificationProps> = ({
         </button>
       </div>
 
-      {/* Description */}
-      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+      {/* Description (sauts de ligne possibles via \\n dans les traductions) */}
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line">
         {description}
       </p>
 

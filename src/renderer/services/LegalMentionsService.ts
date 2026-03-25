@@ -1,7 +1,6 @@
 import { MentionLegale, MentionLegaleCategory, MentionPlaceholderValues } from '../types/Invoice';
 import { FileService } from './FileService';
-
-const MENTIONS_PATH = 'parametre/mentions_legales.json';
+import { ProfilePaths } from './ProfilePaths';
 
 // Mentions légales françaises prédéfinies
 const PREDEFINED_MENTIONS: MentionLegale[] = [
@@ -197,7 +196,7 @@ export class LegalMentionsService {
     }
 
     try {
-      const content = await FileService.readFile(MENTIONS_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('mentions_legales.json'));
       const parsed = JSON.parse(content);
       // Sécurité : si le JSON n'est pas un tableau (ex: '{}' sur profil neuf), utiliser les mentions prédéfinies
       if (!Array.isArray(parsed)) {
@@ -220,7 +219,7 @@ export class LegalMentionsService {
    */
   static async saveMentions(mentions: MentionLegale[]): Promise<void> {
     const content = JSON.stringify(mentions, null, 2);
-    await FileService.writeFile(MENTIONS_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('mentions_legales.json'), content);
     this.mentionsCache = mentions;
   }
 

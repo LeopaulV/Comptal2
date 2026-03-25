@@ -1,15 +1,17 @@
 // Service de gestion des profils Comptal2
-// Chaque profil = parametre/ + data/ dans profiles/{id}/parametre/ et profiles/{id}/data/
+// Stockage : profiles/{id}/parametre/ et profiles/{id}/data/ uniquement
 
 import { FileService } from './FileService';
 import { ConfigService } from './ConfigService';
 import { DataService } from './DataService';
+import { ProfilePaths } from './ProfilePaths';
 import { DEFAULT_SETTINGS } from '../types/Settings';
 
 const PROFILES_DIR = 'profiles';
 const ACTIVE_FILE = 'profiles/active.json';
 const PARAMETRE_DIR = 'parametre';
-const DATA_DIR_NAME = 'data';
+const ROOT_PARAMETRE = 'parametre';
+const ROOT_DATA = 'data';
 
 /** Fichiers JSON à persister par profil (structure neutre pour nouveau profil) */
 const PROFILE_FILES = [
@@ -143,18 +145,9 @@ async function ensureProfilesDir(): Promise<void> {
   }
 }
 
-async function getActiveProfileId(): Promise<string | null> {
-  try {
-    const content = await FileService.readFile(ACTIVE_FILE);
-    const data = JSON.parse(content);
-    return data.activeProfileId ?? null;
-  } catch {
-    return null;
-  }
-}
-
 async function setActiveProfileId(id: string): Promise<void> {
   await FileService.writeFile(ACTIVE_FILE, JSON.stringify({ activeProfileId: id }, null, 2));
+  ProfilePaths.invalidate();
 }
 
 /** Copie le contenu de sourceDir vers destDir (chemins relatifs) */
@@ -169,98 +162,139 @@ async function copyParametreDir(sourceDir: string, destDir: string): Promise<voi
   }
 }
 
-/** Écrit les fichiers parametre/ depuis le contenu du profil */
-async function restoreParametreFromProfile(profileParametrePath: string): Promise<void> {
-  for (const file of PROFILE_FILES) {
-    try {
-      const content = await FileService.readFile(`${profileParametrePath}/${file}`);
-      await FileService.writeFile(`${PARAMETRE_DIR}/${file}`, content);
-    } catch {
-      // Utiliser le défaut si le fichier n'existe pas dans le profil
-      const defaultContent = DEFAULT_CONTENT[file] ?? '{}';
-      await FileService.writeFile(`${PARAMETRE_DIR}/${file}`, defaultContent);
-    }
-  }
-}
-
-/** Sauvegarde le parametre/ actuel vers le dossier du profil */
-async function saveCurrentToProfile(profileParametrePath: string): Promise<void> {
-  await copyParametreDir(PARAMETRE_DIR, profileParametrePath);
-}
-
-/** Chemin du dossier data d'un profil */
 function getProfileDataPath(profileId: string): string {
-  return `${PROFILES_DIR}/${profileId}/${DATA_DIR_NAME}`;
+  return ProfilePaths.getProfileDataPath(profileId);
 }
 
-/** Sauvegarde le dossier data actuel vers le profil */
-async function saveCurrentDataToProfile(profileId: string): Promise<void> {
-  const settings = await ConfigService.loadSettings();
-  const dataDir = settings.dataDirectory || './data';
-  const destPath = getProfileDataPath(profileId);
-  try {
-    await FileService.copyDirectory(dataDir, destPath);
-  } catch (err) {
-    console.warn('[ProfileService] Impossible de copier le dossier data:', err);
+async function rootParametreLooksPopulated(): Promise<boolean> {
+  const settings = await FileService.readFileOptional(`${ROOT_PARAMETRE}/settings.json`);
+  const account = await FileService.readFileOptional(`${ROOT_PARAMETRE}/account.json`);
+  return !!(settings || account);
+}
+
+/** Crée un profil avec fichiers par défaut (parametre + dossier data vide si besoin) */
+async function seedNewProfile(
+  id: string,
+  name: string,
+  description: string | undefined,
+  lastSaved: string
+): Promise<void> {
+  const profileDir = `${PROFILES_DIR}/${id}`;
+  const parametrePath = `${profileDir}/${PARAMETRE_DIR}`;
+  const profileDataPath = getProfileDataPath(id);
+
+  for (const file of PROFILE_FILES) {
+    const content =
+      file === 'settings.json'
+        ? JSON.stringify({ ...DEFAULT_SETTINGS, dataDirectory: profileDataPath }, null, 2)
+        : (DEFAULT_CONTENT[file] ?? '{}');
+    await FileService.writeFile(`${parametrePath}/${file}`, content);
   }
+
+  const info: ProfileInfo = {
+    id,
+    name,
+    description,
+    createdAt: new Date().toISOString(),
+    lastSaved,
+  };
+  await FileService.writeFile(`${profileDir}/info.json`, JSON.stringify(info, null, 2));
 }
 
-/** Met à jour dataDirectory dans settings pour pointer vers le profil */
-async function setProfileDataDirectory(profileId: string): Promise<void> {
-  const settings = await ConfigService.loadSettings();
-  settings.dataDirectory = getProfileDataPath(profileId);
-  await ConfigService.saveSettings(settings);
+/** Migre parametre/ et data/ racine vers un nouveau profil */
+async function migrateRootIntoNewProfile(): Promise<string> {
+  const id = generateId();
+  const profileDir = `${PROFILES_DIR}/${id}`;
+  const parametrePath = `${profileDir}/${PARAMETRE_DIR}`;
+  const profileDataPath = getProfileDataPath(id);
+
+  await copyParametreDir(ROOT_PARAMETRE, parametrePath);
+  try {
+    await FileService.copyDirectory(ROOT_DATA, profileDataPath);
+  } catch (err) {
+    console.warn('[ProfileService] Migration data racine:', err);
+  }
+
+  const settingsPath = `${parametrePath}/settings.json`;
+  try {
+    const raw = await FileService.readFile(settingsPath);
+    const s = JSON.parse(raw);
+    s.dataDirectory = profileDataPath;
+    await FileService.writeFile(settingsPath, JSON.stringify(s, null, 2));
+  } catch {
+    await FileService.writeFile(
+      settingsPath,
+      JSON.stringify({ ...DEFAULT_SETTINGS, dataDirectory: profileDataPath }, null, 2)
+    );
+  }
+
+  const info: ProfileInfo = {
+    id,
+    name: 'Principal',
+    description: 'Migré depuis le dossier racine',
+    createdAt: new Date().toISOString(),
+    lastSaved: new Date().toISOString(),
+  };
+  await FileService.writeFile(`${profileDir}/info.json`, JSON.stringify(info, null, 2));
+  await setActiveProfileId(id);
+  return id;
+}
+
+/** Si des profils existent mais pas active.json : active le premier profil trouvé */
+async function activateFirstExistingProfile(): Promise<void> {
+  const entries = await FileService.readDirectory(PROFILES_DIR);
+  const profileIds = entries
+    .filter((e) => e !== '.gitkeep' && e !== 'active.json' && !e.includes('.') && e.startsWith('profile_'))
+    .sort();
+  if (profileIds.length === 0) return;
+  await setActiveProfileId(profileIds[0]);
 }
 
 export class ProfileService {
   /**
-   * Initialise le système de profils si nécessaire.
-   * Au premier lancement, crée un profil "Principal" à partir du parametre/ actuel.
+   * Initialise le système de profils : migration racine, profil vide, ou profil actif manquant.
    */
   static async ensureInitialized(): Promise<void> {
     await ensureProfilesDir();
-    const activeId = await getActiveProfileId();
+
+    let activeId = await ProfilePaths.getActiveProfileId();
+    if (activeId) {
+      try {
+        await FileService.readFile(`${PROFILES_DIR}/${activeId}/info.json`);
+      } catch {
+        activeId = null;
+        ProfilePaths.invalidate();
+      }
+    }
+
+    const entries = await FileService.readDirectory(PROFILES_DIR).catch(() => []);
+    const hasProfiles = entries.some(
+      (f) => f !== '.gitkeep' && f !== 'active.json' && !f.startsWith('.') && f.startsWith('profile_')
+    );
+
+    if (!activeId && hasProfiles) {
+      await activateFirstExistingProfile();
+      return;
+    }
+
     if (activeId) return;
 
-    const files = await FileService.readDirectory(PROFILES_DIR).catch(() => []);
-    const hasProfiles = files.some((f) => f !== '.gitkeep' && f !== 'active.json' && !f.startsWith('.'));
+    if (!hasProfiles && (await rootParametreLooksPopulated())) {
+      await migrateRootIntoNewProfile();
+      return;
+    }
 
     if (!hasProfiles) {
-    const id = generateId();
-    const profileDir = `${PROFILES_DIR}/${id}`;
-    const parametrePath = `${profileDir}/${PARAMETRE_DIR}`;
-    const profileDataPath = getProfileDataPath(id);
-
-      await copyParametreDir(PARAMETRE_DIR, parametrePath);
-      try {
-        const settings = await ConfigService.loadSettings();
-        const currentDataDir = settings.dataDirectory || './data';
-        await FileService.copyDirectory(currentDataDir, profileDataPath);
-      } catch (err) {
-        console.warn('[ProfileService] Copie data initiale:', err);
-      }
-      await FileService.writeFile(
-        `${parametrePath}/settings.json`,
-        JSON.stringify({ ...DEFAULT_SETTINGS, dataDirectory: profileDataPath }, null, 2)
-      );
-      await setProfileDataDirectory(id);
+      const id = generateId();
+      await seedNewProfile(id, 'Principal', 'Profil par défaut', new Date().toISOString());
       await setActiveProfileId(id);
-
-      const info: ProfileInfo = {
-        id,
-        name: 'Principal',
-        description: 'Profil par défaut',
-        createdAt: new Date().toISOString(),
-        lastSaved: new Date().toISOString(),
-      };
-      await FileService.writeFile(`${profileDir}/info.json`, JSON.stringify(info, null, 2));
     }
   }
 
   /** Liste tous les profils avec indication du profil actif */
   static async listProfiles(): Promise<ProfileListItem[]> {
     await ensureProfilesDir();
-    const activeId = await getActiveProfileId();
+    const activeId = await ProfilePaths.getActiveProfileId();
 
     const entries = await FileService.readDirectory(PROFILES_DIR);
     const profileIds = entries.filter((e) => e !== '.gitkeep' && e !== 'active.json' && !e.includes('.'));
@@ -292,12 +326,9 @@ export class ProfileService {
    */
   static async createProfile(name: string, description?: string): Promise<void> {
     await ensureProfilesDir();
-    const activeId = await getActiveProfileId();
+    const activeId = await ProfilePaths.getActiveProfileId();
 
     if (activeId) {
-      const currentParamPath = `${PROFILES_DIR}/${activeId}/${PARAMETRE_DIR}`;
-      await saveCurrentToProfile(currentParamPath);
-      await saveCurrentDataToProfile(activeId);
       try {
         const info = await this.getProfileInfo(activeId);
         info.lastSaved = new Date().toISOString();
@@ -306,44 +337,22 @@ export class ProfileService {
     }
 
     const id = generateId();
-    const profileDir = `${PROFILES_DIR}/${id}`;
-    const parametrePath = `${profileDir}/${PARAMETRE_DIR}`;
-    const profileDataPath = getProfileDataPath(id);
-
-    for (const file of PROFILE_FILES) {
-      const content =
-        file === 'settings.json'
-          ? JSON.stringify({ ...DEFAULT_SETTINGS, dataDirectory: profileDataPath }, null, 2)
-          : (DEFAULT_CONTENT[file] ?? '{}');
-      await FileService.writeFile(`${parametrePath}/${file}`, content);
-    }
-
-    const info: ProfileInfo = {
-      id,
-      name,
-      description,
-      createdAt: new Date().toISOString(),
-      lastSaved: new Date().toISOString(),
-    };
-    await FileService.writeFile(`${profileDir}/info.json`, JSON.stringify(info, null, 2));
+    const now = new Date().toISOString();
+    await seedNewProfile(id, name, description, now);
     await setActiveProfileId(id);
 
-    await restoreParametreFromProfile(parametrePath);
     ConfigService.clearCache();
     await DataService.reload();
   }
 
   /**
-   * Charge un profil existant (sauvegarde l'actuel puis restaure le profil cible).
+   * Charge un profil existant.
    */
   static async switchProfile(profileId: string): Promise<void> {
-    const activeId = await getActiveProfileId();
+    const activeId = await ProfilePaths.getActiveProfileId();
     if (activeId === profileId) return;
 
     if (activeId) {
-      const currentParamPath = `${PROFILES_DIR}/${activeId}/${PARAMETRE_DIR}`;
-      await saveCurrentToProfile(currentParamPath);
-      await saveCurrentDataToProfile(activeId);
       try {
         const infoContent = await FileService.readFile(`${PROFILES_DIR}/${activeId}/info.json`);
         const info = JSON.parse(infoContent);
@@ -352,8 +361,6 @@ export class ProfileService {
       } catch {}
     }
 
-    const targetParamPath = `${PROFILES_DIR}/${profileId}/${PARAMETRE_DIR}`;
-    await restoreParametreFromProfile(targetParamPath);
     await setActiveProfileId(profileId);
 
     ConfigService.clearCache();
@@ -364,7 +371,7 @@ export class ProfileService {
    * Supprime un profil (sauf s'il est actif).
    */
   static async deleteProfile(profileId: string): Promise<void> {
-    const activeId = await getActiveProfileId();
+    const activeId = await ProfilePaths.getActiveProfileId();
     if (activeId === profileId) {
       throw new Error('Impossible de supprimer le profil actif');
     }
@@ -384,7 +391,7 @@ export class ProfileService {
   }
 
   static async getActiveProfile(): Promise<ProfileInfo | null> {
-    const activeId = await getActiveProfileId();
+    const activeId = await ProfilePaths.getActiveProfileId();
     if (!activeId) return null;
     try {
       return await this.getProfileInfo(activeId);
@@ -394,13 +401,9 @@ export class ProfileService {
   }
 
   /**
-   * Sauvegarde l'état actuel (parametre + data) dans le stockage du profil.
-   * Utile avant un export pour s'assurer que les données sont à jour.
+   * Met à jour la date de dernière sauvegarde du profil (export).
    */
   static async saveCurrentProfileToStorage(profileId: string): Promise<void> {
-    const parametrePath = `${PROFILES_DIR}/${profileId}/${PARAMETRE_DIR}`;
-    await saveCurrentToProfile(parametrePath);
-    await saveCurrentDataToProfile(profileId);
     try {
       const info = await this.getProfileInfo(profileId);
       info.lastSaved = new Date().toISOString();
@@ -410,25 +413,23 @@ export class ProfileService {
 
   /**
    * Exporte un profil (parametre + data) vers un fichier .zip.
-   * Ouvre une boîte de dialogue pour choisir l'emplacement.
    */
   static async exportProfile(profileId: string, profileName: string): Promise<{ path?: string; canceled?: boolean }> {
     const result = await window.electronAPI.exportProfile(profileId, profileName);
     if (!result.success) {
       if (result.canceled) return { canceled: true };
-      throw new Error(result.error || 'Erreur lors de l\'export');
+      throw new Error(result.error || "Erreur lors de l'export");
     }
     return { path: result.path };
   }
 
   /**
    * Importe un profil depuis un fichier .zip.
-   * Le zip doit contenir parametre/ et/ou data/ à la racine.
    */
   static async importProfile(zipPath: string, newProfileName: string): Promise<string> {
     const result = await window.electronAPI.importProfile(zipPath, newProfileName);
     if (!result.success) {
-      throw new Error(result.error || 'Erreur lors de l\'import');
+      throw new Error(result.error || "Erreur lors de l'import");
     }
     return result.profileId!;
   }

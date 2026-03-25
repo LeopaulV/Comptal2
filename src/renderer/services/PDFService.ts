@@ -2,10 +2,10 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Devis, Emetteur, EmetteurExtended, Facture, PosteFacture, PDFTemplate } from '../types/Invoice';
 import { ClientService } from './ClientService';
-import { ConfigService } from './ConfigService';
 import { InvoiceService } from './InvoiceService';
 import { PDFTemplateService } from './PDFTemplateService';
 import { LegalMentionsService } from './LegalMentionsService';
+import { ProfilePaths } from './ProfilePaths';
 
 // Initialisation des fonts pdfmake - import dynamique pour éviter les problèmes d'export
 let fontsLoaded = false;
@@ -463,7 +463,7 @@ export class PDFService {
     const blob = await getPdfBlob(pdfDoc);
     const base64 = await blobToBase64(blob);
     const fileName = `${devis.numero.replace(/[/\\?*:|"]/g, '_')}.pdf`;
-    const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
+    const dataDir = await ProfilePaths.getDataDirectory();
     const relativePath = `${dataDir}/attachments/${fileName}`;
     if (isElectronAvailable()) {
       const writeResult = await window.electronAPI.writeBinaryFile(relativePath, base64);
@@ -612,7 +612,7 @@ export class PDFService {
     const blob = await getPdfBlob(pdfDoc);
     const base64 = await blobToBase64(blob);
     const fileName = `${facture.numero.replace(/[/\\?*:|"]/g, '_')}.pdf`;
-    const dataDir = (await ConfigService.loadSettings()).dataDirectory || 'data';
+    const dataDir = await ProfilePaths.getDataDirectory();
     const relativePath = `${dataDir}/attachments/${fileName}`;
     if (isElectronAvailable()) {
       const writeResult = await window.electronAPI.writeBinaryFile(relativePath, base64);

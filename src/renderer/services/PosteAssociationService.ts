@@ -1,8 +1,6 @@
 import { PosteFacture, PosteGroupe } from '../types/Invoice';
 import { FileService } from './FileService';
-
-const POSTES_PATH = 'parametre/postes_association.json';
-const POSTES_GROUPES_PATH = 'parametre/postes_groupes_association.json';
+import { ProfilePaths } from './ProfilePaths';
 
 export class PosteAssociationService {
   private static cache: PosteFacture[] | null = null;
@@ -11,7 +9,7 @@ export class PosteAssociationService {
   static async loadPostes(): Promise<PosteFacture[]> {
     if (this.cache) return this.cache;
     try {
-      const content = await FileService.readFile(POSTES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('postes_association.json'));
       this.cache = JSON.parse(content);
       return this.cache!;
     } catch {
@@ -22,7 +20,7 @@ export class PosteAssociationService {
 
   static async savePostes(postes: PosteFacture[]): Promise<void> {
     const content = JSON.stringify(postes, null, 2);
-    await FileService.writeFile(POSTES_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('postes_association.json'), content);
     this.cache = postes;
   }
 
@@ -50,7 +48,7 @@ export class PosteAssociationService {
   static async loadPostesGroupes(): Promise<PosteGroupe[]> {
     if (this.groupesCache) return this.groupesCache;
     try {
-      const content = await FileService.readFile(POSTES_GROUPES_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('postes_groupes_association.json'));
       const parsed: Array<Omit<PosteGroupe, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string }> =
         JSON.parse(content);
       this.groupesCache = parsed.map((g) => ({
@@ -72,7 +70,7 @@ export class PosteAssociationService {
       updatedAt: g.updatedAt.toISOString(),
     }));
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(POSTES_GROUPES_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('postes_groupes_association.json'), content);
     this.groupesCache = groupes;
   }
 

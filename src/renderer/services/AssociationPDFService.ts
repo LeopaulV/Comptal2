@@ -2,7 +2,7 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { PDFTemplate } from '../types/Invoice';
 import { AssociationConfig, Donateur, Don, NatureDon, ModeVersement, DONATEUR_ANONYME_ID } from '../types/Association';
-import { Project, CategoryChargesData, Subscription } from '../types/ProjectManagement';
+import { Project, CategoryChargesData } from '../types/ProjectManagement';
 import { Transaction } from '../types/Transaction';
 import { AssociationConfigService } from './AssociationConfigService';
 import { DonateurService } from './DonateurService';
@@ -11,6 +11,7 @@ import { DataService } from './DataService';
 import { PDFTemplateService } from './PDFTemplateService';
 import { RegistreRecusService } from './RegistreRecusService';
 import { ProjectionService } from './ProjectionService';
+import { ProfilePaths } from './ProfilePaths';
 
 let fontsLoaded = false;
 
@@ -67,8 +68,6 @@ const getDonDisplayDate = (don: Don): Date =>
     : don.date instanceof Date
       ? don.date
       : new Date(don.date);
-
-const RECUS_BANK_PATH = 'data/association_recus';
 
 const isElectronAvailable = () =>
   typeof window !== 'undefined' &&
@@ -682,7 +681,8 @@ export class AssociationPDFService {
     const blob = await getPdfBlob(pdfDoc);
     const base64 = await blobToBase64(blob);
     const fileName = `Recap_Dons_${numero.replace(/[/\\]/g, '-')}_${formatDate(startDate).replace(/\//g, '-')}_${formatDate(endDate).replace(/\//g, '-')}.pdf`;
-    const bankPath = `${RECUS_BANK_PATH}/${fileName}`;
+    const dataRoot = await ProfilePaths.getDataDirectory();
+    const bankPath = `${dataRoot}/association_recus/${fileName}`;
 
     // Enregistrer dans le registre + banque PDF
     if (items.length > 0) {
@@ -947,7 +947,8 @@ export class AssociationPDFService {
       .replace(/[^a-zA-Z0-9àâéèêëîïôùûüç\s-]/gi, '')
       .replace(/\s+/g, '_');
     const fileName = `Recu_${numero}_${safeName}_${fmtDate(startDate).replace(/\//g, '-')}_${fmtDate(endDate).replace(/\//g, '-')}.pdf`;
-    const bankPath = `${RECUS_BANK_PATH}/${fileName}`;
+    const dataRoot = await ProfilePaths.getDataDirectory();
+    const bankPath = `${dataRoot}/association_recus/${fileName}`;
 
     let base64: string | null = null;
     if (isElectronAvailable()) {

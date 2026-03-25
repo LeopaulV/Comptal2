@@ -159,6 +159,7 @@ const CategoryLegendPanel: React.FC<CategoryLegendPanelProps> = ({
                 <div
                   key={code}
                   className={`legend-item ${isEditing ? 'editing' : ''}`}
+                  {...(code === 'X' ? { 'data-tour-step': 'category-transfer-x' } : {})}
                 >
                   <div className="legend-item-color">
                     {isEditing ? (

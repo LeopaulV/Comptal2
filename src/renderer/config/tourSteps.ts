@@ -33,9 +33,19 @@ export const tourSteps: TourStep[] = [
     },
   },
   {
-    id: 'import-data',
-    titleKey: 'tour.steps.importData.title',
-    descriptionKey: 'tour.steps.importData.description',
+    id: 'import-file',
+    titleKey: 'tour.steps.importFile.title',
+    descriptionKey: 'tour.steps.importFile.description',
+    targetSelector: '[data-tour-step="import-data"]',
+    targetRoute: '/upload',
+    position: 'top',
+    waitForElement: true,
+    checkCompletion: async () => false,
+  },
+  {
+    id: 'import-mapping-info',
+    titleKey: 'tour.steps.importMappingInfo.title',
+    descriptionKey: 'tour.steps.importMappingInfo.description',
     targetSelector: '[data-tour-step="import-data"]',
     targetRoute: '/upload',
     position: 'top',
@@ -43,6 +53,16 @@ export const tourSteps: TourStep[] = [
     checkCompletion: async () => {
       return await OnboardingService.isStep2Completed();
     },
+  },
+  {
+    id: 'category-transfer-x',
+    titleKey: 'tour.steps.categoryTransferX.title',
+    descriptionKey: 'tour.steps.categoryTransferX.description',
+    targetSelector: '[data-tour-step="category-transfer-x"]',
+    targetRoute: '/edition',
+    position: 'left',
+    waitForElement: true,
+    checkCompletion: async () => false,
   },
   {
     id: 'create-category',
@@ -65,4 +85,7 @@ export const getTourStepById = (id: string): TourStep | undefined => {
 export const getTourStepByIndex = (index: number): TourStep | undefined => {
   return tourSteps[index];
 };
+
+/** Événement global pour lancer le didacticiel depuis les paramètres */
+export const GUIDED_TOUR_START_EVENT = 'comptal-guided-tour-start';
 

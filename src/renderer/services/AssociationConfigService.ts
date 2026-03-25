@@ -1,7 +1,6 @@
 import { AssociationConfig, AssociationConfigSerialized } from '../types/Association';
 import { FileService } from './FileService';
-
-const ASSOCIATION_CONFIG_PATH = 'parametre/association_config.json';
+import { ProfilePaths } from './ProfilePaths';
 
 const defaultConfig = (): AssociationConfig => ({
   denominationSociale: '',
@@ -16,7 +15,7 @@ const defaultConfig = (): AssociationConfig => ({
 export class AssociationConfigService {
   static async loadConfig(): Promise<AssociationConfig | null> {
     try {
-      const content = await FileService.readFile(ASSOCIATION_CONFIG_PATH);
+      const content = await FileService.readFile(await ProfilePaths.parametreFile('association_config.json'));
       const parsed = JSON.parse(content) as Partial<AssociationConfigSerialized>;
 
       const base = defaultConfig();
@@ -40,7 +39,7 @@ export class AssociationConfigService {
       updatedAt: new Date().toISOString(),
     };
     const content = JSON.stringify(serialized, null, 2);
-    await FileService.writeFile(ASSOCIATION_CONFIG_PATH, content);
+    await FileService.writeFile(await ProfilePaths.parametreFile('association_config.json'), content);
   }
 
   static async getOrCreateConfig(): Promise<AssociationConfig> {
