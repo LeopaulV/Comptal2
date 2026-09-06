@@ -1,0 +1,217 @@
+/* Didacticiel interactif Comptal2.1 — halo, carte, drag, lanceur */
+
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9200;
+}
+
+.onboarding-halo {
+  position: fixed;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 3px var(--invoicing-primary),
+    0 0 0 8px rgba(30, 58, 138, 0.22),
+    0 0 28px 8px rgba(59, 130, 246, 0.35);
+  transition:
+    top 0.18s ease,
+    left 0.18s ease,
+    width 0.18s ease,
+    height 0.18s ease;
+}
+
+.onboarding-card {
+  position: fixed;
+  pointer-events: auto;
+  z-index: 9210;
+  width: min(420px, calc(100vw - 32px));
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-xl);
+  user-select: none;
+}
+
+.onboarding-card.is-dragging {
+  box-shadow: var(--shadow-xl);
+  cursor: grabbing;
+}
+
+.onboarding-card-handle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: grab;
+  color: var(--invoicing-gray-500);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 0 6px;
+  border-bottom: 1px solid var(--invoicing-gray-200);
+}
+
+.onboarding-card-handle:active {
+  cursor: grabbing;
+}
+
+.onboarding-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--invoicing-gray-900);
+  user-select: text;
+}
+
+.onboarding-card-body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--invoicing-gray-700);
+  user-select: text;
+}
+
+.onboarding-card-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.onboarding-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-gray-100);
+  padding: 0;
+  cursor: pointer;
+}
+
+.onboarding-dot.is-active {
+  background: var(--invoicing-primary);
+  border-color: var(--invoicing-primary);
+}
+
+.onboarding-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.onboarding-card-actions .ct-btn-primary,
+.onboarding-card-actions .ct-btn-secondary {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+}
+
+.onboarding-card-skips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.onboarding-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--invoicing-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.onboarding-link-btn:hover {
+  color: var(--invoicing-primary-light);
+}
+
+.onboarding-resume {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 9220;
+  min-height: 40px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--invoicing-primary);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+
+.onboarding-launcher {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 8800;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.onboarding-launcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: var(--invoicing-surface);
+  color: var(--invoicing-gray-800);
+  font-weight: 600;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.onboarding-launcher-btn:hover {
+  border-color: var(--invoicing-primary);
+  color: var(--invoicing-primary);
+}
+
+.onboarding-launcher-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--invoicing-gray-200);
+  background: var(--invoicing-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.onboarding-launcher-menu button {
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: var(--invoicing-gray-800);
+  cursor: pointer;
+}
+
+.onboarding-launcher-menu button:hover {
+  background: var(--invoicing-gray-100);
+}
+
+.dark .onboarding-halo,
+html.dark .onboarding-halo {
+  box-shadow:
+    0 0 0 3px var(--invoicing-primary),
+    0 0 0 8px rgba(59, 130, 246, 0.35),
+    0 0 28px 8px rgba(96, 165, 250, 0.28);
+}

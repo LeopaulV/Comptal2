@@ -1,0 +1,12 @@
+{
+  "delimiter": ";",
+  "columns": [
+    { "header": "Date", "field": "date" },
+    { "header": "Compte bancaire", "field": "account" },
+    { "header": "Libellé", "field": "label" },
+    { "header": "Débit", "field": "debit" },
+    { "header": "Crédit", "field": "credit" },
+    { "header": "Catégorie Comptal", "field": "category" },
+    { "header": "Facture", "field": "invoiceNumero" }
+  ]
+}

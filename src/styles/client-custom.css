@@ -1,0 +1,556 @@
+/* Styles partagés avec la facturation (listes, onglets, modales). */
+@import './facturation-custom.css';
+
+.contact-role-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.contact-role-picker label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--invoicing-gray-300);
+  border-radius: 9px;
+  background: var(--invoicing-gray-50);
+}
+.contact-role-picker span, .contact-role-picker small { display: block; }
+.contact-role-picker small { color: var(--invoicing-gray-500); }
+.contact-donor-badge { color: #9d174d; background: #fce7f3; }
+.dark .contact-donor-badge, html.dark .contact-donor-badge { color: #f9a8d4; background: #831843; }
+
+.contact-row {
+  cursor: pointer;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 12px;
+  background: var(--invoicing-surface);
+}
+
+.contact-card .org-section-title {
+  margin: 0 0 2px;
+}
+
+.contact-color-field {
+  padding: 10px 12px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 10px;
+  background: var(--invoicing-gray-50);
+}
+
+.contact-color-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.contact-color-control input {
+  width: 54px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--invoicing-gray-300);
+  border-radius: 8px;
+  background: var(--invoicing-surface);
+  cursor: pointer;
+}
+
+.contact-color-control code {
+  color: var(--invoicing-gray-600);
+  font-size: 0.76rem;
+}
+
+.contact-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.contact-color-swatches button {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--invoicing-surface);
+  border-radius: 7px;
+  box-shadow: 0 0 0 1px var(--invoicing-gray-300);
+  cursor: pointer;
+}
+
+.contact-color-swatches button:hover,
+.contact-color-swatches button.is-selected {
+  box-shadow: 0 0 0 2px var(--invoicing-primary);
+  transform: scale(1.06);
+}
+
+.contact-color-field .contact-hint {
+  margin: 8px 0 0;
+}
+
+.contact-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.contact-fiche-modal {
+  width: min(1200px, 100%);
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-fiche-modal .inv-wide-modal-head {
+  margin: 0;
+  padding: 16px 22px;
+  background: linear-gradient(180deg, var(--invoicing-primary-lightest) 0%, var(--invoicing-surface) 100%);
+  border-bottom: 1px solid var(--invoicing-gray-200);
+}
+
+.contact-fiche-avatar {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--invoicing-primary);
+  background: var(--invoicing-surface);
+  border: 1px solid var(--invoicing-gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.contact-fiche {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.contact-fiche-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 22px 0;
+}
+
+.contact-fiche-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--invoicing-gray-100);
+  color: var(--invoicing-gray-700);
+  font-size: 0.78rem;
+}
+
+.contact-fiche-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  margin-top: 12px;
+  border-top: 1px solid var(--invoicing-gray-200);
+}
+
+.contact-fiche-main,
+.contact-fiche-side {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 20px 22px;
+}
+
+.contact-fiche-side {
+  background: var(--invoicing-gray-50);
+  border-left: 1px solid var(--invoicing-gray-200);
+}
+
+.contact-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.contact-section-head .org-section-title {
+  margin: 0;
+}
+
+.contact-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.contact-encart-grid,
+.contact-encart-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.contact-encart-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.contact-encart {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 10px;
+  background: var(--invoicing-surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.contact-encart-static {
+  cursor: default;
+}
+
+.contact-encart-static:hover {
+  border-color: var(--invoicing-gray-200);
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.contact-encart:hover {
+  border-color: var(--invoicing-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.contact-encart.is-caduc {
+  opacity: 0.85;
+}
+
+.contact-encart-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--invoicing-primary);
+  background: var(--invoicing-primary-lightest);
+}
+
+.contact-encart-icon.is-facture {
+  color: var(--invoicing-success);
+  background: #d1fae5;
+}
+
+.contact-encart-icon.is-donation {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+html.dark .contact-encart-icon.is-facture {
+  background: #064e3b;
+}
+
+html.dark .contact-encart-icon.is-donation {
+  color: #fbbf24;
+  background: #78350f;
+}
+
+.contact-encart-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contact-encart-body strong {
+  color: var(--invoicing-gray-900);
+  font-size: 0.88rem;
+}
+
+.contact-encart-body small {
+  color: var(--invoicing-gray-500);
+  font-size: 0.72rem;
+}
+
+.contact-encart-pj {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--invoicing-primary) !important;
+}
+
+.contact-hint {
+  margin: 0 0 8px;
+  color: var(--invoicing-gray-500);
+  font-size: 0.8rem;
+}
+
+.contact-groupe-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.contact-groupe-create {
+  display: flex;
+  flex: 1 1 220px;
+  gap: 8px;
+  align-items: center;
+}
+
+.contact-groupe-create input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  background: #fff;
+  color: var(--invoicing-gray-900);
+}
+
+.dark .contact-groupe-create input,
+html.dark .contact-groupe-create input {
+  background: var(--invoicing-gray-100);
+  border-color: var(--invoicing-gray-300);
+  color: var(--invoicing-gray-800);
+}
+
+.contact-detail-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.contact-note-encart {
+  padding: 12px 14px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 12px;
+  background: var(--invoicing-gray-100);
+}
+
+.contact-note-encart .org-field {
+  margin: 0;
+}
+
+.contact-note-encart textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 88px;
+}
+
+.contact-filter-groupe {
+  min-width: 180px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 8px;
+  background: var(--invoicing-surface);
+  color: var(--invoicing-gray-800);
+}
+
+.contact-groupe-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.contact-groupe-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+}
+
+.contact-groupe-head strong {
+  color: var(--invoicing-gray-800);
+  font-size: 0.82rem;
+}
+
+.contact-groupe-head span {
+  color: var(--invoicing-gray-500);
+  font-size: 0.75rem;
+}
+
+.contact-element-modal {
+  width: min(760px, 100%);
+}
+
+.contact-element {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.contact-element-meta,
+.contact-element-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.contact-element-meta {
+  color: var(--invoicing-gray-600);
+  font-size: 0.85rem;
+}
+
+.contact-element-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.contact-element-totals > div {
+  padding: 10px 12px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 10px;
+  background: var(--invoicing-gray-100);
+}
+
+.contact-element-totals small {
+  display: block;
+  color: var(--invoicing-gray-500);
+  font-size: 0.7rem;
+}
+
+.contact-element-postes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contact-element-postes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 10px;
+}
+
+.contact-element-postes small {
+  display: block;
+  margin-top: 2px;
+  color: var(--invoicing-gray-500);
+  font-size: 0.72rem;
+}
+
+.contact-signed-block {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 4px 0;
+}
+
+.contact-signed-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--invoicing-gray-700);
+  white-space: nowrap;
+}
+
+.contact-signed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.contact-signed-list li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 220px;
+}
+
+.contact-signed-open {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  padding: 4px 8px;
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 6px;
+  background: var(--invoicing-surface);
+  color: var(--invoicing-gray-800);
+  font-size: 0.8rem;
+}
+
+.contact-signed-open:hover {
+  border-color: var(--invoicing-primary);
+}
+
+.contact-signed-open span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contact-signed-block .inv-icon-button {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.contact-signed-block .inv-compact-button {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .contact-fiche-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-fiche-side {
+    border-left: none;
+    border-top: 1px solid var(--invoicing-gray-200);
+  }
+
+  .contact-detail-row {
+    grid-template-columns: 1fr;
+  }
+}

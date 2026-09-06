@@ -1,0 +1,10 @@
+{
+  "format": "comptal21-plugin",
+  "formatVersion": 1,
+  "id": "exemple-categories-famille",
+  "name": "Exemple — catégories familiales",
+  "version": "1.0.0",
+  "type": "category_pack",
+  "hooks": ["categories.apply"],
+  "description": "Pack de catégories type foyer. N’écrase pas les codes déjà présents."
+}

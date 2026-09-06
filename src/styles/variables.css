@@ -1,0 +1,111 @@
+/* ============================================
+   PALETTE DE COULEURS PROFESSIONNELLE COMPTAL2.1
+   (reprise de la charte visuelle Comptal2)
+   ============================================ */
+:root {
+  /* Thème clair - Bleus professionnels */
+  --invoicing-primary: #1e3a8a;
+  --invoicing-primary-light: #3b82f6;
+  --invoicing-primary-lighter: #60a5fa;
+  --invoicing-primary-lightest: #dbeafe;
+
+  /* Gris neutres */
+  --invoicing-gray-50: #f8fafc;
+  --invoicing-gray-100: #f1f5f9;
+  --invoicing-gray-200: #e2e8f0;
+  --invoicing-gray-300: #cbd5e1;
+  --invoicing-gray-400: #94a3b8;
+  --invoicing-gray-500: #64748b;
+  --invoicing-gray-600: #475569;
+  --invoicing-gray-700: #334155;
+  --invoicing-gray-800: #1e293b;
+  --invoicing-gray-900: #0f172a;
+
+  /* États */
+  --invoicing-success: #10b981;
+  --invoicing-warning: #f59e0b;
+  --invoicing-danger: #ef4444;
+  --invoicing-info: #3b82f6;
+
+  /* Surface des cartes / conteneurs (contraste avec le fond de page gray-50) */
+  --invoicing-surface: #ffffff;
+
+  /* Ombres professionnelles */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Palette pastel des graphiques (Chart.js) */
+  --chart-pastel-blue: #bfdbfe;
+  --chart-pastel-green: #bbf7d0;
+  --chart-pastel-red: #fecaca;
+  --chart-pastel-orange: #fed7aa;
+  --chart-pastel-purple: #e9d5ff;
+  --chart-pastel-yellow: #fef08a;
+  --chart-pastel-pink: #fbcfe8;
+  --chart-pastel-teal: #99f6e4;
+
+  /* Chrome Chart.js (axes, grilles, infobulles, fond des cartes) */
+  --chart-card: #ffffff;
+  --chart-axis: #1e293b;
+  --chart-grid: rgba(148, 163, 184, 0.28);
+  --chart-grid-zero: rgba(15, 23, 42, 0.22);
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --chart-tooltip-title: #1e293b;
+  --chart-tooltip-body: #334155;
+  --chart-tooltip-border: rgba(15, 23, 42, 0.12);
+  --chart-muted-fill: #e2e8f0;
+}
+
+.dark,
+html.dark {
+  color-scheme: dark;
+
+  /* Thème sombre - Bleus atténués */
+  --invoicing-primary: #3b82f6;
+  --invoicing-primary-light: #60a5fa;
+  --invoicing-primary-lighter: #93c5fd;
+  --invoicing-primary-lightest: #1e3a8a;
+
+  /* Gris foncés - textes en blanc/clair */
+  --invoicing-gray-50: #0f172a;
+  --invoicing-gray-100: #1e293b;
+  --invoicing-gray-200: #334155;
+  --invoicing-gray-300: #475569;
+  --invoicing-gray-400: #64748b;
+  --invoicing-gray-500: #cbd5e1;
+  --invoicing-gray-600: #e2e8f0;
+  --invoicing-gray-700: #f1f5f9;
+  --invoicing-gray-800: #ffffff;
+  --invoicing-gray-900: #ffffff;
+
+  /* Cartes légèrement relevées par rapport au fond gray-50 (#0f172a) */
+  --invoicing-surface: #1e293b;
+
+  /* Ombres adaptées au fond sombre */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+
+  /* Pastels un peu plus saturés pour rester lisibles sur fond sombre */
+  --chart-pastel-blue: #93c5fd;
+  --chart-pastel-green: #86efac;
+  --chart-pastel-red: #fca5a5;
+  --chart-pastel-orange: #fdba74;
+  --chart-pastel-purple: #d8b4fe;
+  --chart-pastel-yellow: #fde047;
+  --chart-pastel-pink: #f9a8d4;
+  --chart-pastel-teal: #5eead4;
+
+  --chart-card: #334155;
+  --chart-axis: #e2e8f0;
+  --chart-grid: rgba(226, 232, 240, 0.22);
+  --chart-grid-zero: rgba(248, 250, 252, 0.38);
+  --chart-tooltip-bg: rgba(15, 23, 42, 0.96);
+  --chart-tooltip-title: #f8fafc;
+  --chart-tooltip-body: #e2e8f0;
+  --chart-tooltip-border: rgba(255, 255, 255, 0.18);
+  --chart-muted-fill: #cbd5e1;
+}

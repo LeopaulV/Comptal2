@@ -1,0 +1,10 @@
+{
+  "format": "comptal21-plugin",
+  "formatVersion": 1,
+  "id": "exemple-mentions-tpe",
+  "name": "Exemple — mentions TPE",
+  "version": "1.0.0",
+  "type": "mention_pack",
+  "hooks": ["invoice.mentions"],
+  "description": "Exemple de pack de mentions. Zippez ce dossier (manifest.json + mentions.json) pour l’importer dans Paramètre → Plugins."
+}

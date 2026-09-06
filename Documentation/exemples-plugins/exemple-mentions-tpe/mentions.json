@@ -1,0 +1,22 @@
+{
+  "mentions": [
+    {
+      "id": "plugin-penalites-tpe",
+      "label": "Pénalités de retard (TPE)",
+      "content": "En cas de retard de paiement, une pénalité égale à 3 fois le taux d'intérêt légal sera exigible (loi n° 2008-776 du 4 août 2008).",
+      "category": "penalites"
+    },
+    {
+      "id": "plugin-indemnite-40",
+      "label": "Indemnité 40 €",
+      "content": "Indemnité forfaitaire de recouvrement de 40 € due de plein droit en cas de retard (art. D. 441-5 du Code de commerce).",
+      "category": "penalites"
+    },
+    {
+      "id": "plugin-escompte-neant",
+      "label": "Escompte néant",
+      "content": "Escompte pour paiement anticipé : néant.",
+      "category": "penalites"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "groups": [{ "name": "Maison", "color": "#94a3b8" }],
+  "categories": [
+    { "code": "LOY", "name": "Loyer", "color": "#93c5fd", "group": "Maison" },
+    { "code": "ALI", "name": "Alimentation", "color": "#86efac", "group": "Maison" },
+    { "code": "SAN", "name": "Santé", "color": "#fda4af" }
+  ]
+}

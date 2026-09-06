@@ -1,0 +1,10 @@
+{
+  "format": "comptal21-plugin",
+  "formatVersion": 1,
+  "id": "exemple-export-expert",
+  "name": "Exemple — export expert-comptable",
+  "version": "1.0.0",
+  "type": "export_mapper",
+  "hooks": ["export.accountantCsv"],
+  "description": "CSV trésorerie pour un cabinet. Ce n’est pas un FEC. Zippez ce dossier pour l’importer."
+}

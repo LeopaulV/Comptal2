@@ -1,0 +1,400 @@
+/* Variables de la charte visuelle - DOIT être en premier */
+@import './variables.css';
+@import './onboarding-custom.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--invoicing-gray-900);
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Enfant du wrapper zoom : remplit la hauteur disponible au dézoom */
+.main-zoom-content > * {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+}
+
+/* ============================================
+   COMPOSANTS PARTAGÉS (charte visuelle)
+   ============================================ */
+
+/* Carte de contenu */
+.ct-card {
+  background-color: var(--invoicing-surface);
+  border: 1px solid var(--invoicing-gray-200);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dark .ct-card,
+html.dark .ct-card {
+  border-color: var(--invoicing-gray-300);
+}
+
+.settings-tab {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--invoicing-surface);
+  color: var(--invoicing-gray-700);
+  border: 1px solid var(--invoicing-gray-300);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.settings-tab.is-active {
+  font-weight: 600;
+  background: var(--invoicing-primary);
+  color: #ffffff;
+  border-color: var(--invoicing-primary);
+}
+
+/* Bouton principal (CTA) */
+.ct-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background-color: var(--invoicing-primary);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ct-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.ct-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Bouton secondaire */
+.ct-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background-color: var(--invoicing-gray-200);
+  color: var(--invoicing-gray-900);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ct-btn-secondary:hover:not(:disabled) {
+  background-color: var(--invoicing-gray-300);
+  transform: translateY(-1px);
+}
+
+.ct-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dark .ct-btn-secondary,
+html.dark .ct-btn-secondary {
+  color: var(--invoicing-gray-700);
+}
+
+/* Bouton danger */
+.ct-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  min-height: 44px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background-color: var(--invoicing-danger);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ct-btn-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.ct-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Petit bouton icône */
+.ct-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--invoicing-gray-500);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ct-btn-icon:hover {
+  background-color: var(--invoicing-gray-200);
+  color: var(--invoicing-gray-900);
+}
+
+/* Champs de formulaire */
+.ct-input,
+.ct-select {
+  padding: 8px 10px;
+  border: 1px solid var(--invoicing-gray-300);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  color: var(--invoicing-gray-900);
+  transition: all 0.2s ease;
+}
+
+.ct-input:focus,
+.ct-select:focus {
+  outline: none;
+  border-color: var(--invoicing-primary-light);
+  box-shadow: 0 0 0 3px var(--invoicing-primary-lightest);
+}
+
+.dark .ct-input,
+html.dark .ct-input,
+.dark .ct-select,
+html.dark .ct-select {
+  background-color: var(--invoicing-gray-100);
+  border-color: var(--invoicing-gray-300);
+  color: var(--invoicing-gray-800);
+}
+
+.ct-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--invoicing-gray-700);
+  margin-bottom: 6px;
+}
+
+/* Tableau simple */
+.ct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.ct-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--invoicing-gray-600);
+  border-bottom: 2px solid var(--invoicing-gray-200);
+  white-space: nowrap;
+}
+
+.ct-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--invoicing-gray-200);
+  color: var(--invoicing-gray-800);
+}
+
+.ct-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.ct-table tbody tr:hover {
+  background-color: var(--invoicing-gray-100);
+}
+
+/* En-tête de section */
+.ct-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--invoicing-gray-900);
+  margin-bottom: 16px;
+}
+
+.ct-hint {
+  font-size: 0.85rem;
+  color: var(--invoicing-gray-500);
+  margin-bottom: 16px;
+}
+
+/* Scrollbar personnalisé */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.palette-card {
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid var(--invoicing-gray-200);
+  background: var(--invoicing-surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.palette-card:hover { border-color: var(--invoicing-gray-300); }
+.palette-card[data-selected='true'] {
+  border-color: var(--invoicing-primary);
+  background: var(--invoicing-primary-lightest);
+}
+.palette-custom-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: var(--invoicing-primary);
+  background: var(--invoicing-primary-lightest);
+}
+.palette-dynamic-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #0f766e;
+  background: #ccfbf1;
+}
+html.dark .palette-dynamic-badge {
+  color: #5eead4;
+  background: #134e4a;
+}
+.palette-creator {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--invoicing-gray-200);
+  background: var(--invoicing-gray-50);
+}
+.palette-harmony {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-200);
+  background: color-mix(in srgb, var(--invoicing-primary) 6%, transparent);
+}
+.palette-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--invoicing-gray-200);
+  background: var(--invoicing-gray-50);
+}
+.palette-preview-row[data-selected='false'] { opacity: 0.55; }
+.palette-preview-row[data-selected='true'] {
+  border-color: var(--invoicing-primary-light);
+  background: var(--invoicing-primary-lightest);
+}
+.palette-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--invoicing-gray-300);
+  display: inline-block;
+}
+.signature-pad { display: flex; flex-direction: column; gap: 8px; }
+.signature-pad-canvas {
+  width: 100%;
+  border: 1px dashed var(--invoicing-gray-400);
+  border-radius: 10px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+.signature-pad-clear { align-self: flex-start; min-height: 34px; }
+
+.category-swatch-transparent {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #c5cdd8 25%, transparent 25%),
+    linear-gradient(-45deg, #c5cdd8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #c5cdd8 75%),
+    linear-gradient(-45deg, transparent 75%, #c5cdd8 75%);
+  background-size: 6px 6px;
+  background-position: 0 0, 0 3px, 3px -3px, -3px 0;
+  border: 1px dashed var(--invoicing-gray-400);
+  box-shadow: none;
+}
+
+.edition-category-dot.category-swatch-transparent,
+.edition-category-collapsed-dot.category-swatch-transparent,
+.edition-filter-chip-dot.category-swatch-transparent {
+  background-image: none;
+  background-color: transparent;
+}
+
+.dark .category-swatch-transparent,
+html.dark .category-swatch-transparent {
+  background-color: var(--invoicing-gray-200);
+  background-image:
+    linear-gradient(45deg, var(--invoicing-gray-400) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--invoicing-gray-400) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--invoicing-gray-400) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--invoicing-gray-400) 75%);
+}
+
+.info-tooltip-portal p {
+  margin: 6px 0 0;
+}
