@@ -16,6 +16,7 @@ import TourOverlay from './components/Onboarding/TourOverlay';
 import OnboardingLauncher from './components/Onboarding/OnboardingLauncher';
 import PageIntroRunner from './components/Onboarding/PageIntroRunner';
 import ScopeDisclaimerModal from './components/Common/ScopeDisclaimerModal';
+import UpdateNotifier from './components/Common/UpdateNotifier';
 
 const Previsionnel = lazy(() => import('./pages/Previsionnel/Previsionnel'));
 const Facturation = lazy(() => import('./pages/Facturation/Facturation'));
@@ -111,6 +112,7 @@ const App: React.FC = () => {
         <OnboardingLauncher />
         <PageIntroRunner />
         <ScopeDisclaimerModal isOpen={scopeOpen} onAcknowledge={() => void acknowledgeScope()} />
+        <UpdateNotifier />
         <ToastContainer
           position="bottom-right"
           autoClose={3000}

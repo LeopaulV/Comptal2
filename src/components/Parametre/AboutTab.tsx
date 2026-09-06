@@ -93,6 +93,9 @@ const AboutTab: React.FC = () => {
         </h3>
 
         <div className="flex flex-col gap-4">
+          <p className="text-sm" style={{ color: 'var(--invoicing-gray-700)' }}>
+            {t('settings.about.profilesPreserved')}
+          </p>
           <div>
             <button
               className="ct-btn-primary"

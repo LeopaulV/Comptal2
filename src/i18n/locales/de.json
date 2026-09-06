@@ -242,7 +242,10 @@
       "download": "Herunterladen und installieren",
       "downloading": "Download… {{percent}} %",
       "installing": "Installation… Die Anwendung wird neu gestartet.",
-      "updateError": "Prüfung nicht möglich (offline oder keine veröffentlichte Version)."
+      "updateError": "Prüfung nicht möglich (offline oder keine veröffentlichte Version).",
+      "profilesPreserved": "Updates ersetzen nur das Programm. Profile, Datenbanken und Anhänge bleiben im Windows-Datenordner (%APPDATA%) und werden nicht gelöscht.",
+      "autoUpdateStart": "Update v{{version}} verfügbar. Installation läuft (Profile bleiben erhalten)…",
+      "autoUpdating": "Update v{{version}} wird heruntergeladen… {{percent}} %"
     },
     "plugins": {
       "title": "Plugins / Mods",
@@ -1697,7 +1700,7 @@
     "privacyController": "Sie sind Verantwortlicher für die Daten auf diesem Computer (DSGVO). Comptal hostet nichts in der Cloud.",
     "privacyRetention": "Belege, Rechnungen, Spendenbescheinigungen: 10 Jahre aufbewahren. Das Löschrecht ist dadurch begrenzt. CGI Art. 1734.",
     "privacyZip": "Ein Profil-Export ist ein unverschlüsseltes ZIP. Schützen Sie es wie einen Buchhaltungsordner.",
-    "privacyUpdates": "Updates kommen von GitHub Releases (signierte Installer).",
+    "privacyUpdates": "Updates kommen von GitHub Releases des Repos LeopaulV/Comptal2 (signierter Installer). Lokale Profile werden nicht gelöscht.",
     "associationDisclaimer": "Comptal erstellt keine Vereinsjahresabschlüsse (ANC 2018-06) und ersetzt keinen Abschlussprüfer.",
     "invoicingDisclaimer": "Rechnungspflichtangaben liegen bei Ihnen. Keine Übermittlung an eine PA. Korrektur einer ausgestellten Rechnung = Gutschrift."
   },

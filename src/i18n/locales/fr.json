@@ -242,7 +242,10 @@
       "download": "Télécharger et installer",
       "downloading": "Téléchargement… {{percent}}%",
       "installing": "Installation… L'application va redémarrer.",
-      "updateError": "Vérification impossible (hors-ligne ou aucune release publiée)."
+      "updateError": "Vérification impossible (hors-ligne ou aucune release publiée).",
+      "profilesPreserved": "Les mises à jour remplacent uniquement le programme. Vos profils, bases et pièces restent dans le dossier de données Windows (%APPDATA%) et ne sont pas effacés.",
+      "autoUpdateStart": "Mise à jour v{{version}} disponible. Installation en cours (profils conservés)…",
+      "autoUpdating": "Téléchargement de la mise à jour v{{version}}… {{percent}} %"
     },
     "plugins": {
       "title": "Plugins / mods",
@@ -1697,7 +1700,7 @@
     "privacyController": "Vous êtes responsable de traitement des données présentes sur cet ordinateur (RGPD). Comptal n’héberge pas vos données dans le cloud.",
     "privacyRetention": "Pièces justificatives, factures et reçus : conservation recommandée 10 ans. Le droit d’effacement est limité par ces obligations. Destruction prématurée : CGI art. 1734.",
     "privacyZip": "L’export de profil est un ZIP en clair (base SQLite + pièces). Protégez-le comme un dossier comptable.",
-    "privacyUpdates": "Les mises à jour sont téléchargées depuis GitHub Releases (binaire signé par l’éditeur du projet).",
+    "privacyUpdates": "Les mises à jour sont téléchargées depuis les GitHub Releases du dépôt LeopaulV/Comptal2 (installeur signé). Elles n’effacent pas les profils locaux.",
     "associationDisclaimer": "Comptal n’établit pas les comptes annuels d’une association (règlement ANC n° 2018-06) et ne remplace pas un commissaire aux comptes. L’éligibilité aux reçus fiscaux reste celle de l’organisme.",
     "invoicingDisclaimer": "Mentions de facture à votre charge. Pas de transmission vers une plateforme agréée. Correction d’une facture émise = avoir."
   },

@@ -44,7 +44,8 @@ Chaque profil a sa propre base SQLite (`comptal.db`). On peut en créer plusieur
 
 - **Stack** : Tauri 2, React 18, TypeScript, Vite, Tailwind, SQLite
 - **Persistance** : une base par profil ; en développement sous `data/` (ignoré par Git)
-- **Plateformes packagées** : Windows (NSIS), Linux (deb / rpm)
+- **Plateformes packagées** : Windows (NSIS `.exe`), Linux (deb / rpm)
+- **Mises à jour** : l’app installée interroge les [GitHub Releases](https://github.com/LeopaulV/Comptal2/releases) (`latest.json`). Les profils restent dans `%APPDATA%\com.leopaul.comptal21\data` et ne sont pas écrasés.
 
 ### Développement
 
@@ -56,8 +57,11 @@ npm run tauri:dev
 Build d’installateur :
 
 ```bash
-npm run tauri:build:windows   # NSIS
-npm run tauri:build:linux     # deb + rpm
+npm run tauri:build:windows          # NSIS (.exe)
+npm run tauri:build:windows:signed   # idem, avec signature updater
+npm run tauri:build:linux            # deb + rpm
 ```
+
+Pour publier une version Windows : incrémenter `version` dans `package.json` et `src-tauri/tauri.conf.json` / `Cargo.toml`, puis pousser un tag `vX.Y.Z` vers GitHub. Le workflow crée la Release avec `Comptal2.1_*_x64-setup.exe` et `latest.json`. Les secrets du dépôt doivent contenir `TAURI_SIGNING_PRIVATE_KEY` (contenu de `src-tauri/keys/comptal21.key`, jamais commité).
 
 Un profil de test reproductible peut être généré avec `npm run db:dev` (voir [Base de développement](./Documentation/base-developpement.md)).

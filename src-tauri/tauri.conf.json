@@ -30,7 +30,7 @@
     "active": true,
     "targets": ["nsis", "deb", "rpm"],
     "publisher": "Leopaul",
-    "homepage": "https://github.com/LEOPAUL-COMPTAL/comptal21-releases",
+    "homepage": "https://github.com/LeopaulV/Comptal2",
     "copyright": "Copyright © 2026 Leopaul",
     "license": "MIT",
     "category": "Finance",
@@ -74,10 +74,13 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUyMDYzQ0FFRjY0Q0M4MUUKUldRZXlFejJyandHVWdzSXJseUx5c0l2V2d6ZHVwa0VlSHpUNUlCZm5yRnJVTlBIOXZoRzVvQUcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCNkZEQjQ0RjY5MUUyNTUKUldSVjRwSDJSTnR2YTZTWmFVdWNQNE5PRjFUR1JxeEI2LzF5K3VGTEpKejRDR1ozNGR1MlZHZGsK",
       "endpoints": [
-        "https://github.com/LEOPAUL-COMPTAL/comptal21-releases/releases/latest/download/latest.json"
-      ]
+        "https://github.com/LeopaulV/Comptal2/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

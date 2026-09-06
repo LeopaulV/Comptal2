@@ -242,7 +242,10 @@
       "download": "Download and install",
       "downloading": "Downloading… {{percent}}%",
       "installing": "Installing… The application will restart.",
-      "updateError": "Check failed (offline or no published release)."
+      "updateError": "Check failed (offline or no published release).",
+      "profilesPreserved": "Updates replace the program only. Your profiles, databases and attachments stay in the Windows data folder (%APPDATA%) and are not deleted.",
+      "autoUpdateStart": "Update v{{version}} available. Installing now (profiles kept)…",
+      "autoUpdating": "Downloading update v{{version}}… {{percent}}%"
     },
     "plugins": {
       "title": "Plugins / mods",
@@ -1697,7 +1700,7 @@
     "privacyController": "You are the data controller for data on this computer (GDPR). Comptal does not host your data in the cloud.",
     "privacyRetention": "Invoices, receipts and supporting documents: keep them for 10 years. Erasure rights are limited by that duty. Early destruction: CGI art. 1734.",
     "privacyZip": "A profile export is a clear-text ZIP (SQLite + files). Protect it like an accounting folder.",
-    "privacyUpdates": "Updates are downloaded from GitHub Releases (binaries signed by the project publisher).",
+    "privacyUpdates": "Updates are downloaded from GitHub Releases on LeopaulV/Comptal2 (signed installer). They do not delete local profiles.",
     "associationDisclaimer": "Comptal does not prepare association annual accounts (ANC regulation 2018-06) and does not replace a statutory auditor. Tax-receipt eligibility remains that of the organisation.",
     "invoicingDisclaimer": "Invoice legal notices are your responsibility. No transmission to an accredited platform. Correcting an issued invoice = credit note."
   },
